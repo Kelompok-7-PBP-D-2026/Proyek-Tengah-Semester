@@ -1,0 +1,20 @@
+<nav class="navbar navbar-expand-lg bg-cream sticky-top shadow-sm">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-forest" href="{% url 'profil:home' %}">
+            <span class="chip">🍱 MBG</span>
+            <span class="d-none d-sm-inline">Makan Berlebih Gratis</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+                aria-controls="mainNav" aria-expanded="false" aria-label="Buka navigasi">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                <li class="nav-item"><a class="nav-link text-forest" href="#cara-kerja">Cara kerja</a></li>
+                <li class="nav-item"><a class="nav-link text-forest" href="#dampak">Dampak</a></li>
+                <!-- Link modul menyusul begitu route masing-masing ada -->
+                <li class="nav-item"><a class="btn btn-mbg-green btn-sm px-3" href="#">Masuk</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>

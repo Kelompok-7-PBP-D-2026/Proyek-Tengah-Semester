@@ -62,4 +62,42 @@ di https://wiki.openstreetmap.org/wiki/API.
 
 - Repositori: https://github.com/Kelompok-7-PBP-D-2026/Proyek-Tengah-Semester
 - Deployment PWS: akan ditambahkan setelah deployment pertama
-- Desain Figma: akan ditambahkan setelah desain selesai dibuat
+- Desain Figma: https://www.figma.com/design/MT2ZypZ7HGnSp8RB2AaWKt
+
+## Design System
+
+Desain antarmuka MBG (Makan Berlebih Gratis) dikelola dalam satu file Figma
+(link di atas) dan sudah diimplementasikan sebagai token di
+`static/css/style.css` serta kerangka template bersama di `templates/`
+(`base.html`, `header.html`, `footer.html`).
+
+- **Palet warna**: Forest Green `#19532B`, Sunshine `#FFCA26`, Cream `#F3E8CC`,
+  Crisp Carrot `#F86015`, Kiwi `#9ABC04`, Tomato Burst `#D42518`.
+- **Tipografi**: Fredoka untuk judul (display), Poppins untuk teks isi,
+  tombol, dan caption.
+- **Radius**: 12px untuk tombol/input/chip, 20px untuk kartu.
+- **Kerangka CSS**: Bootstrap 5 dengan variabel warna yang dioverride memakai
+  token palet di atas, sehingga komponen bawaan ikut tema.
+- **Komponen bersama**: tombol (primary hijau/oranye, sekunder kuning, outline),
+  chip status, badge tenggat waktu, kartu makanan, kartu statistik dampak,
+  navbar dan footer.
+
+## Menjalankan Secara Lokal
+
+1. Buat dan aktifkan virtual environment:
+   ```bash
+   python -m venv env
+   source env/Scripts/activate
+   ```
+2. Pasang dependensi proyek:
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+3. Salin `.env.example` menjadi `.env`. Untuk pengembangan lokal, nilai default
+   `DEBUG=True` sudah cukup; jangan isi maupun commit kredensial PWS ke file ini.
+4. Terapkan migrasi lalu jalankan server:
+   ```bash
+   python manage.py migrate
+   python manage.py runserver
+   ```
+5. Buka http://127.0.0.1:8000/ di browser.

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+{# Hero — struktur mengikuti Landing B di Figma #}
+<section class="bg-forest text-cream py-5">
+    <div class="container py-4 text-center text-lg-start">
+        <h1 class="font-display display-3 fw-bold text-uppercase mb-3">
+            Selamatkan <span class="text-sunshine">Makanan</span><br>Dari Sisa Acara
+        </h1>
+        <p class="lead mb-4" style="max-width: 42rem;">
+            MBG menyalurkan makanan surplus acara kampus ke mahasiswa yang membutuhkan —
+            kurangi limbah, catat dampaknya.
+        </p>
+        <div class="d-flex gap-2 justify-content-center justify-content-lg-start">
+            <a class="btn btn-mbg-green px-4" style="background-color: var(--mbg-cream); color: var(--mbg-forest);" href="#makanan">Cari Makanan Gratis</a>
+            <a class="btn btn-mbg-outline-green px-4" style="border-color: var(--mbg-cream); color: var(--mbg-cream);" href="#donasi">Bagikan Acara Makanan</a>
+        </div>
+    </div>
+</section>
+
+<div class="ticker">
+    <span class="eyebrow">Makanan Berlebih Gratis • Makan Berlebih Gratis • Makanan Berlebih Gratis • Makan Berlebih Gratis</span>
+</div>
+
+<section id="makanan" class="container py-5">
+    <h2 class="font-display h3 text-uppercase mb-4">Makanan <span class="text-carrot">Tersedia</span></h2>
+    <div class="row g-3">
+        {% for item in makanan %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <span class="chip mb-2">{{ item.status }}</span>
+                    <h3 class="card-title h6 text-forest fw-bold">{{ item.nama }}</h3>
+                    <p class="small text-muted">{{ item.porsi }} porsi · {{ item.lokasi }} · {{ item.jarak }}</p>
+                    <span class="badge badge-deadline">Sebelum {{ item.batas_waktu }}</span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-0">Belum ada donasi makanan.</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section id="dampak" class="container pb-5">
+    <h2 class="font-display h4 text-forest mb-4">Dampak Kita Bersama</h2>
+    <div class="row g-3">
+        {% for stat in dampak %}
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm h-100">
+                <div class="card-body py-4">
+                    <p class="font-display display-6 text-forest fw-bold mb-1">{{ stat.angka }}</p>
+                    <p class="small text-muted mb-0">{{ stat.label }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="container pb-5">
+    <h2 class="font-display h4 text-forest mb-4">Modul yang Sedang Dibangun</h2>
+    <div class="row g-3">
+        {% for modul in modul_list %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title h6 text-forest">{{ modul.nama }}</h3>
+                    <p class="card-text small text-muted mb-0">{{ modul.pic }}</p>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p class="text-muted">Daftar modul belum tersedia.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

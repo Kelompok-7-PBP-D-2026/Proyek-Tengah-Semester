@@ -1,0 +1,108 @@
+/* Design system MBG — sinkron dengan Figma Foundations
+   (https://www.figma.com/design/MT2ZypZ7HGnSp8RB2AaWKt).
+   Palet, tipografi, dan radius di bawah adalah token resmi kelompok;
+   komponen Bootstrap di-override lewat variabel CSS Bootstrap 5. */
+:root {
+    /* Palet (Figma Foundations - Colors) */
+    --mbg-forest: #19532B;
+    --mbg-sunshine: #FFCA26;
+    --mbg-cream: #F3E8CC;
+    --mbg-carrot: #F86015;
+    --mbg-kiwi: #9ABC04;
+    --mbg-tomato: #D42518;
+
+    /* Override variabel Bootstrap biar komponen bawaan ikut tema */
+    --bs-primary: var(--mbg-forest);
+    --bs-success: var(--mbg-kiwi);
+    --bs-warning: var(--mbg-sunshine);
+    --bs-danger: var(--mbg-tomato);
+    --bs-body-color: #212b23;
+    --bs-body-bg: var(--mbg-cream);
+    --bs-border-radius: 12px;
+    --bs-border-radius-lg: 20px;
+}
+
+/* Tipografi (Figma Foundations - Typography) */
+body {
+    font-family: "Poppins", system-ui, sans-serif;
+    background-color: var(--mbg-cream);
+}
+
+.font-display {
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 600;
+}
+
+/* Radius token Figma: 12 input/button/chip, 20 kartu */
+.btn, .form-control, .chip { border-radius: 12px; }
+.card { border-radius: 20px; border: none; }
+
+.bg-forest { background-color: var(--mbg-forest) !important; }
+.bg-sunshine { background-color: var(--mbg-sunshine) !important; }
+.bg-cream { background-color: var(--mbg-cream) !important; }
+.text-forest { color: var(--mbg-forest) !important; }
+.text-carrot { color: var(--mbg-carrot) !important; }
+.text-sunshine { color: var(--mbg-sunshine) !important; }
+
+/* Tombol */
+.btn-mbg-primary {
+    background-color: var(--mbg-carrot);
+    color: #fff;
+}
+.btn-mbg-primary:hover { background-color: #d9530f; color: #fff; }
+
+.btn-mbg-green {
+    background-color: var(--mbg-forest);
+    color: var(--mbg-cream);
+}
+.btn-mbg-green:hover { background-color: #12401f; color: #fff; }
+
+.btn-mbg-outline-green {
+    background-color: transparent;
+    border: 2px solid var(--mbg-forest);
+    color: var(--mbg-forest);
+}
+.btn-mbg-outline-green:hover { background-color: var(--mbg-forest); color: #fff; }
+
+.btn-mbg-sunshine {
+    background-color: var(--mbg-sunshine);
+    color: #212b23;
+}
+.btn-mbg-sunshine:hover { background-color: #e8b81f; color: #212b23; }
+
+/* Chip status (mis. "Tersedia") */
+.chip {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    background-color: var(--mbg-forest);
+    color: #fff;
+    border-radius: 9999px;
+}
+
+/* Badge tenggat waktu (mis. "Sebelum 16.30") */
+.badge-deadline {
+    background-color: var(--mbg-tomato);
+    color: #fff;
+    border-radius: 9999px;
+    font-weight: 600;
+}
+
+/* Eyebrow (Figma: Poppins Bold 12, kapital, letter-spacing +12%) */
+.eyebrow {
+    font-family: "Poppins", sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* Marquee ticker strip ala Landing "MAKANAN BERLEBIH GRATIS" */
+.ticker {
+    background-color: var(--mbg-forest);
+    color: var(--mbg-cream);
+    padding: 0.75rem 0;
+    overflow: hidden;
+    white-space: nowrap;
+}

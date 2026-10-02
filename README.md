@@ -101,3 +101,13 @@ Desain antarmuka MBG (Makan Berlebih Gratis) dikelola dalam satu file Figma
    python manage.py runserver
    ```
 5. Buka http://127.0.0.1:8000/ di browser.
+
+## Deployment PWS
+
+Aplikasi sudah ter-deploy di PWS:
+
+**https://immanuel-marvin-pts-surplus.pws.cs.ui.ac.id**
+
+- Repository PWS: https://pws.cs.ui.ac.id/immanuel.marvin/pts-surplus
+- Database: PostgreSQL (schema `tugas_kelompok`)
+- Konfigurasi lewat tab Environs di PWS: `PRODUCTION`, `DEBUG`, `SECRET_KEY`, `DB_*`, `SCHEMA`, `PWS_DEPLOY_URL`

@@ -1,0 +1,7 @@
+<div class="modal fade" id="delete-modal" tabindex="-1" aria-labelledby="delete-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content donation-delete-card">
+    <div class="donation-delete-icon" aria-hidden="true">!</div><h2 id="delete-title" class="font-display">Hapus donasi ini?</h2>
+    <p>“{{ item.nama }}” akan hilang dari daftar dan tidak bisa dikembalikan.</p>
+    <form method="post" action="{% url 'donasi:hapus' item.pk %}" data-delete-form>{% csrf_token %}<p class="donation-form-errors" role="alert" tabindex="-1"></p><div class="d-flex justify-content-center gap-3"><button class="btn btn-mbg-outline-green" type="button" data-bs-dismiss="modal">Batal</button><button class="btn donation-danger" type="submit">Ya, hapus</button></div></form>
+  </div></div>
+</div>

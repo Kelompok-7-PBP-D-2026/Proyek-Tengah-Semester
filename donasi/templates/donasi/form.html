@@ -1,0 +1,25 @@
+{% extends 'donasi/base.html' %}
+{% block title %}{% if item %}Edit{% else %}Buat{% endif %} Donasi — MBG{% endblock %}
+{% block content %}
+<section class="donation-form-shell donation-content">
+  <nav class="donation-breadcrumb" aria-label="Breadcrumb"><a href="{% url 'donasi:daftar' %}">Donasi</a><span aria-hidden="true">›</span><span>{% if item %}Edit{% else %}Buat{% endif %} donasi</span></nav>
+  <h1 class="donation-heading">{% if item %}EDIT{% else %}BUAT{% endif %} <span>DONASI</span></h1>
+  <p class="donation-intro">Isi data makanan surplus supaya penerima bisa langsung melihatnya.</p>
+  <form method="post" enctype="multipart/form-data" class="donation-panel donation-form" data-donation-form novalidate>
+    {% csrf_token %}
+    <div class="donation-form-errors" role="alert" tabindex="-1">{% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+    <div class="donation-form-grid">
+      {% include 'donasi/partials/field.html' with field=form.nama wide=True %}
+      {% include 'donasi/partials/field.html' with field=form.jumlah_porsi %}
+      {% include 'donasi/partials/field.html' with field=form.lokasi %}
+      {% include 'donasi/partials/field.html' with field=form.waktu_tersedia %}
+      {% include 'donasi/partials/field.html' with field=form.waktu_akhir_pengambilan %}
+      {% include 'donasi/partials/field.html' with field=form.foto wide=True %}
+      {% include 'donasi/partials/field.html' with field=form.catatan wide=True %}
+    </div>
+    <datalist id="lokasi-options">{% for lokasi in lokasi_list %}<option value="{{ lokasi }}">{% endfor %}</datalist>
+    <div class="donation-form-actions"><a class="btn btn-mbg-outline-green" href="{% if item %}{{ item.get_absolute_url }}{% else %}{% url 'donasi:daftar' %}{% endif %}">Batal</a><button type="submit" class="btn btn-mbg-green">Simpan donasi</button></div>
+  </form>
+  {% if form.errors %}{{ form.errors.get_json_data|json_script:'donation-initial-errors' }}{% endif %}
+</section>
+{% endblock %}

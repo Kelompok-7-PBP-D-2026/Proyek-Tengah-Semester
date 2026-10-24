@@ -10,6 +10,9 @@ venv/
 # Django
 db.sqlite3
 staticfiles/
+media/
+.coverage
+htmlcov/
 
 # Environment dan kredensial
 .env

@@ -43,6 +43,10 @@ Manfaat aplikasi ini bagi masyarakat antara lain:
 
 ## Public API yang Digunakan
 
+Implementasi dan cara mencoba modul Donasi Makanan dijelaskan di
+[donasi/README.md](donasi/README.md), termasuk integrasi profil, venue, dan klaim
+yang masih menunggu model anggota terkait.
+
 Aplikasi ini menggunakan API dari [OpenStreetMap](https://www.openstreetmap.org).
 API ini digunakan untuk mencari alamat titik pengambilan makanan di lingkungan kampus
 serta menghitung jarak antara lokasi donor dan penerima. Dokumentasi API dapat diakses

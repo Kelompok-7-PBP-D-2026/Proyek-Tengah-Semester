@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Profil — MBG{% endblock %}
+
+{% block content %}
+<section class="container py-5" style="max-width: 36rem;">
+    <a class="small text-forest" href="{% url 'profil:profil_saya' %}">&larr; Kembali ke profil</a>
+    <div class="card shadow-sm mt-3">
+        <div class="card-body p-4">
+            <h1 class="font-display h4 text-forest mb-3">Edit Profil</h1>
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                    {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                {% endfor %}
+                <button class="btn btn-mbg-green" type="submit">Simpan</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

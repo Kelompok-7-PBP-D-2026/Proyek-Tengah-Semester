@@ -1,0 +1,64 @@
+name: CI/CD
+
+# Test jalan setiap ada pull request ke main dan setiap push ke main.
+# Deploy ke PWS hanya jalan setelah test lulus DAN hanya dari main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Pasang dependensi
+        run: pip install -r requirements-dev.txt
+
+      - name: Cek konfigurasi Django
+        run: python manage.py check
+
+      - name: Pastikan tidak ada perubahan model yang belum punya migrasi
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Jalankan unit test
+        run: |
+          coverage run manage.py test
+          coverage report
+
+  deploy:
+    name: Deploy ke PWS
+    needs: test
+    # Hanya dari push ke main, bukan dari pull request.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push ke PWS
+        env:
+          # Secret ini berisi URL git PWS lengkap dengan kredensial pemilik
+          # proyek (lihat README bagian CI/CD). Buat dulu di
+          # Settings > Secrets and variables > Actions sebelum merge ke main.
+          PWS_URL: ${{ secrets.PWS_URL }}
+        run: |
+          if [ -z "$PWS_URL" ]; then
+            echo "::warning::Secret PWS_URL belum dibuat, deploy ke PWS dilewati."
+            exit 0
+          fi
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git push "$PWS_URL" "$(git branch --show-current):master"

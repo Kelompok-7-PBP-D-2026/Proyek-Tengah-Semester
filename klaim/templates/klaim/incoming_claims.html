@@ -13,20 +13,12 @@
         <p class="claim-eyebrow">Donor</p>
         <h1 class="claim-title">Klaim <span class="claim-title__accent">Masuk</span></h1>
 
-        <form method="post" action="{% url 'klaim:claim_verify_code' %}" class="claim-card verify-card">
-            {% csrf_token %}
-            <div class="verify-card__field">
-                <label class="claim-label" for="pickup-code-input">Verifikasi kode ambil</label>
-                <input id="pickup-code-input" name="pickup_code" type="text" maxlength="8" autocomplete="off"
-                       placeholder="MBG-XXXX" class="form-control claim-input" data-uppercase required>
-                <p class="claim-hint">Minta penerima menunjukkan kode, lalu masukkan di sini.</p>
+        <div class="stat-grid">
+            {% for stat in stats %}
+            <div class="claim-card stat-card">
+                <p class="stat-card__value">{{ stat.value }}</p>
+                <p class="stat-card__label">{{ stat.label }}</p>
             </div>
-            <button type="submit" class="claim-btn claim-btn--forest">Verifikasi</button>
-        </form>
-
-        <div class="filter-chips" role="navigation" aria-label="Filter status">
-            {% for item in status_filters %}
-            <a class="filter-chip{% if item.active %} filter-chip--active{% endif %}" href="?{% if item.key %}status={{ item.key }}{% endif %}">{{ item.label }} ({{ item.count }})</a>
             {% endfor %}
         </div>
 
@@ -41,13 +33,14 @@
                             <th scope="col">Porsi</th>
                             <th scope="col">Waktu ambil</th>
                             <th scope="col">Status</th>
-                            <th scope="col">Aksi</th>
+                            <th scope="col">Keterangan</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for claim in page_obj %}
+                        {% with recipient_name=claim.recipient.get_full_name|default:claim.recipient.get_username %}
                         <tr>
-                            <td>{{ claim.recipient.get_full_name|default:claim.recipient.get_username }}</td>
+                            <td>{{ recipient_name }}</td>
                             <td>
                                 {{ claim.food_name }}
                                 {% if claim.note %}<span class="claim-table__note">Catatan: {{ claim.note }}</span>{% endif %}
@@ -56,36 +49,19 @@
                             <td class="text-nowrap">{{ claim.pickup_time|id_datetime_short }}</td>
                             <td>{% include "klaim/_status_badge.html" %}</td>
                             <td>
-                                <div class="claim-row-actions">
-                                    {% if claim.can_approve %}
-                                    <form method="post" action="{% url 'klaim:claim_approve' claim.pk %}">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                        <button type="submit" class="claim-btn claim-btn--kiwi claim-btn--sm">Setujui</button>
-                                    </form>
-                                    {% endif %}
-                                    {% if claim.can_reject %}
-                                    <form method="post" action="{% url 'klaim:claim_reject' claim.pk %}" data-confirm="Tolak klaim ini? Porsi akan dikembalikan ke donasi.">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                        <button type="submit" class="claim-btn claim-btn--outline claim-btn--sm">Tolak</button>
-                                    </form>
-                                    {% endif %}
-                                    {% if claim.can_delete %}
-                                    <form method="post" action="{% url 'klaim:claim_delete' claim.pk %}" data-confirm="Hapus klaim ini dari daftar? Tindakan ini tidak bisa dibatalkan.">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                        <button type="submit" class="claim-btn claim-btn--danger-outline claim-btn--sm">Hapus</button>
-                                    </form>
-                                    {% endif %}
-                                    {% if claim.status == 'approved' and not claim.is_expired %}
-                                    <span class="claim-muted-text">Verifikasi kode saat diambil</span>
-                                    {% elif not claim.can_approve and not claim.can_reject and not claim.can_delete %}
-                                    <span class="claim-muted-text">Tidak ada aksi</span>
-                                    {% endif %}
-                                </div>
+                                {% if claim.can_verify %}
+                                <button type="button" class="claim-btn claim-btn--forest claim-btn--sm"
+                                        data-verify-open
+                                        data-verify-url="{% url 'klaim:claim_verify_code' claim.pk %}"
+                                        data-recipient="{{ recipient_name }}">Setujui</button>
+                                {% elif claim.display_status == 'picked_up' %}
+                                <span class="claim-muted-text">Selesai</span>
+                                {% else %}
+                                <span class="claim-muted-text">Klaim dibatalkan</span>
+                                {% endif %}
                             </td>
                         </tr>
+                        {% endwith %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -94,10 +70,36 @@
         {% include "klaim/_pagination.html" %}
         {% else %}
         <div class="claim-card claim-empty">
-            <p class="claim-empty__text">Belum ada klaim masuk{% if selected_status %} dengan status ini{% endif %}.</p>
+            <p class="claim-empty__text">Belum ada klaim masuk.</p>
         </div>
         {% endif %}
+
+        <p class="claim-footnote">
+            Klik Setujui lalu masukkan kode klaim dari penerima. Klaim yang tidak diambil sampai batas waktu
+            dibatalkan otomatis dan porsinya kembali tersedia.
+        </p>
     </div>
+
+    <dialog class="claim-modal" id="verify-dialog" aria-labelledby="verify-title">
+        <form method="post" class="claim-modal__form" data-verify-form novalidate>
+            {% csrf_token %}
+            <p class="claim-eyebrow">Verifikasi kode</p>
+            <h2 class="claim-modal__title" id="verify-title">Verifikasi kode klaim</h2>
+            <p class="claim-modal__text">
+                Minta kode ambil dari <span data-verify-recipient>penerima</span>, lalu masukkan di sini.
+                Klaim baru disetujui kalau kodenya cocok.
+            </p>
+            <label class="claim-label" for="verify-code-input">Kode klaim</label>
+            <input id="verify-code-input" name="pickup_code" type="text" maxlength="8" autocomplete="off"
+                   placeholder="MBG-XXXX" class="form-control claim-input" data-uppercase required>
+            <p class="claim-hint" data-verify-hint>Kode ada di halaman Detail Klaim penerima.</p>
+            <p class="claim-error" data-verify-error role="alert" hidden></p>
+            <div class="claim-modal__actions">
+                <button type="button" class="claim-btn claim-btn--outline" data-verify-close>Batal</button>
+                <button type="submit" class="claim-btn claim-btn--carrot">Verifikasi dan setujui</button>
+            </div>
+        </form>
+    </dialog>
 </div>
 
 <script src="{% static 'klaim/js/claim.js' %}" defer></script>

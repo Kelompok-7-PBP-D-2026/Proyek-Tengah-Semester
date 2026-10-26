@@ -1,5 +1,5 @@
 /* Claim module behavior (vanilla JS): confirm dialogs, double-submit guard,
-   note character counter, portion input limiter, pickup code uppercase. */
+   donor code-verification modal, note counter, portion limiter, code uppercase. */
 (function () {
     "use strict";
 
@@ -81,8 +81,8 @@
         if (!form.closest || !form.closest(".claim-page")) {
             return;
         }
-        if (form.getAttribute("method") === "dialog") {
-            return; // the confirm dialog's own form
+        if (form.getAttribute("method") === "dialog" || form.hasAttribute("data-verify-form")) {
+            return; // dialog-owned forms handle themselves
         }
         if (form.dataset.submitting === "true") {
             event.preventDefault();
@@ -107,6 +107,100 @@
             root.querySelectorAll("form").forEach(unlockForm);
         }
     });
+
+    // ---- Donor: pickup code verification modal -------------------------
+    var verifyDialog = root.querySelector("#verify-dialog");
+    if (verifyDialog && typeof verifyDialog.showModal === "function") {
+        var verifyForm = verifyDialog.querySelector("[data-verify-form]");
+        var codeInput = verifyForm.querySelector('input[name="pickup_code"]');
+        var hintText = verifyForm.querySelector("[data-verify-hint]");
+        var errorText = verifyForm.querySelector("[data-verify-error]");
+        var recipientLabel = verifyForm.querySelector("[data-verify-recipient]");
+        var verifySubmit = verifyForm.querySelector('button[type="submit"]');
+
+        var setVerifyError = function (message) {
+            if (message) {
+                errorText.textContent = message;
+                errorText.hidden = false;
+                hintText.hidden = true;
+                codeInput.classList.add("is-invalid");
+            } else {
+                errorText.hidden = true;
+                hintText.hidden = false;
+                codeInput.classList.remove("is-invalid");
+            }
+        };
+
+        var unlockVerify = function () {
+            delete verifyForm.dataset.busy;
+            verifySubmit.disabled = false;
+            verifySubmit.classList.remove("is-loading");
+        };
+
+        root.querySelectorAll("[data-verify-open]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                verifyForm.setAttribute("action", button.getAttribute("data-verify-url"));
+                recipientLabel.textContent = button.getAttribute("data-recipient") || "penerima";
+                codeInput.value = "";
+                setVerifyError("");
+                unlockVerify();
+                verifyDialog.showModal();
+                codeInput.focus();
+            });
+        });
+
+        verifyDialog.querySelectorAll("[data-verify-close]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                verifyDialog.close();
+            });
+        });
+
+        codeInput.addEventListener("input", function () {
+            if (codeInput.classList.contains("is-invalid")) {
+                setVerifyError("");
+            }
+        });
+
+        verifyForm.addEventListener("submit", function (event) {
+            event.preventDefault();
+            if (verifyForm.dataset.busy === "true") {
+                return;
+            }
+            if (!codeInput.value.trim()) {
+                setVerifyError("Masukkan kode klaim terlebih dahulu.");
+                return;
+            }
+            verifyForm.dataset.busy = "true";
+            verifySubmit.disabled = true;
+            verifySubmit.classList.add("is-loading");
+
+            fetch(verifyForm.getAttribute("action"), {
+                method: "POST",
+                body: new FormData(verifyForm),
+                credentials: "same-origin",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+            })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    if (result.ok) {
+                        window.location.reload(); // success message comes from Django messages
+                        return;
+                    }
+                    setVerifyError(result.data.message || "Terjadi kesalahan. Coba lagi.");
+                    unlockVerify();
+                    codeInput.focus();
+                    codeInput.select();
+                })
+                .catch(function () {
+                    setVerifyError("Tidak bisa terhubung ke server. Coba lagi.");
+                    unlockVerify();
+                });
+        });
+    }
 
     // ---- Note character counter ----------------------------------------
     root.querySelectorAll("[data-char-counter]").forEach(function (input) {

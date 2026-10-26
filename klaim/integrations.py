@@ -11,6 +11,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
+from django.db.models import F
 from django.urls import NoReverseMatch, reverse
 
 from .utils import ensure_aware, next_slot_start
@@ -21,24 +22,25 @@ logger = logging.getLogger(__name__)
 DONATION_MODEL = "donasi.Donasi"
 
 # Maps our keys to attribute paths on the donation model.
-# Dotted paths (e.g. "venue.nama") and zero-argument callables/properties work.
+# Dotted paths (e.g. "venue.nama") and zero-argument callables/properties work,
+# except "available_portions", which must be a plain model field (it is written to).
 # None means "not available on the donation model".
 FIELD_MAP = {
     "id": "pk",
     "food_name": "nama",
     # Donasi has no display-name field; the owner's full name or username is used.
-    # Point this to the profile display name once the profil module provides one.
     "donor_name": None,
-    "pickup_location": "lokasi",  # a plain text field for now; "venue.<field>" later
+    "pickup_location": "lokasi",
     "pickup_start": "waktu_tersedia",
     "pickup_deadline": "waktu_akhir_pengambilan",
-    # Treated as the TOTAL posted portions. Remaining stock is computed in klaim.
-    "total_portions": "jumlah_porsi",
+    # REMAINING stock. Claims subtract from it, cancel/expire add back.
+    "available_portions": "jumlah_porsi",
     "owner_id": "donor_id",
-    "distance_km": None,  # optional; None means "not available"
+    "distance_km": None,
 }
 REQUIRED_FIELDS = (
-    "id", "food_name", "pickup_location", "pickup_deadline", "total_portions", "owner_id",
+    "id", "food_name", "pickup_location", "pickup_deadline",
+    "available_portions", "owner_id",
 )
 
 # URL names in the donation app.
@@ -60,7 +62,7 @@ class DonationInfo:
     donor_name: str
     pickup_location: str
     pickup_deadline: object
-    total_portions: int
+    available_portions: int
     owner_id: object
     pickup_start: object = None
     distance_km: object = None
@@ -135,11 +137,16 @@ def _to_donation_info(obj):
         donor_name=str(donor_name),
         pickup_location=str(values["pickup_location"]),
         pickup_deadline=ensure_aware(values["pickup_deadline"]),
-        total_portions=int(values["total_portions"]),
+        available_portions=int(values["available_portions"]),
         owner_id=values["owner_id"],
         pickup_start=ensure_aware(values["pickup_start"]),
         distance_km=float(distance) if distance is not None else None,
     )
+
+
+def donation_info_from_instance(donation):
+    """Public wrapper: convert a donation model instance into DonationInfo."""
+    return _to_donation_info(donation)
 
 
 def _demo_donations():
@@ -158,7 +165,7 @@ def _demo_donations():
             donor_name="BEM Fasilkom UI",
             pickup_location="Lobi Gedung A",
             pickup_deadline=deadline,
-            total_portions=40,
+            available_portions=40,
             owner_id=owner_id,
             distance_km=0.8,
         ),
@@ -168,7 +175,7 @@ def _demo_donations():
             donor_name="UKM Pecinta Alam",
             pickup_location="Gedung Pusat Kegiatan",
             pickup_deadline=deadline + timedelta(hours=1),
-            total_portions=15,
+            available_portions=15,
             owner_id=owner_id,
             distance_km=1.2,
         ),
@@ -192,6 +199,23 @@ def get_donation(donation_id, *, lock=False):
         queryset = queryset.select_for_update()
     obj = queryset.filter(pk=donation_id).first()
     return _to_donation_info(obj) if obj else None
+
+
+def adjust_portions(donation_id, delta):
+    """Add `delta` to the donation's remaining stock (negative reserves portions).
+
+    Must run inside transaction.atomic(). Uses an F() expression so the update is
+    atomic in the database. Does nothing in demo mode or when the donation was deleted.
+    """
+    model = _get_donation_model()
+    if model is None:
+        return
+    field = FIELD_MAP["available_portions"]
+    if not field or "." in field:
+        raise ImproperlyConfigured(
+            "FIELD_MAP['available_portions'] must be a plain field on the donation model."
+        )
+    model._default_manager.filter(pk=donation_id).update(**{field: F(field) + delta})
 
 
 def _safe_reverse(url_name, *args):

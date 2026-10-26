@@ -1,4 +1,5 @@
 """Business rules for claims. Views stay thin and call these functions."""
+import secrets
 from datetime import timedelta
 
 from django.db import IntegrityError, transaction
@@ -8,23 +9,31 @@ from . import integrations
 from .models import (
     ACTIVE_STATUSES,
     MAX_PORTIONS_PER_CLAIM,
+    PICKUP_GRACE_MINUTES,
     Claim,
     ClaimStatus,
 )
-from .utils import build_pickup_slots
+from .utils import build_pickup_slots, normalize_pickup_code
+
+WRONG_CODE_MESSAGE = "Kode tidak cocok. Periksa lagi dengan penerima."
 
 
 class ClaimError(Exception):
     """A business-rule violation. The message is safe to show to the user."""
 
 
-def get_claim_blocker(user, donation, remaining_portions):
+def calculate_expires_at(pickup_time, pickup_deadline):
+    """Chosen pickup time plus grace, never later than the donation deadline."""
+    return min(pickup_time + timedelta(minutes=PICKUP_GRACE_MINUTES), pickup_deadline)
+
+
+def get_claim_blocker(user, donation):
     """Return a reason (Indonesian) why `user` cannot claim `donation`, or None."""
     if donation.owner_id is not None and donation.owner_id == user.pk:
         return "Kamu tidak bisa mengklaim donasimu sendiri."
     if donation.pickup_deadline <= timezone.now():
         return "Batas ambil donasi ini sudah lewat."
-    if remaining_portions <= 0:
+    if donation.available_portions <= 0:
         return "Porsi donasi ini sudah habis."
     if Claim.objects.filter(
         recipient=user, donation_id=donation.id, status__in=ACTIVE_STATUSES
@@ -35,22 +44,48 @@ def get_claim_blocker(user, donation, remaining_portions):
     return None
 
 
+def _expire(claim):
+    """Mark a claim expired and give its portions back. Call inside a transaction."""
+    claim.status = ClaimStatus.EXPIRED
+    claim.closed_at = claim.expires_at
+    claim.save(update_fields=["status", "closed_at", "updated_at"])
+    integrations.adjust_portions(claim.donation_id, claim.portions)
+
+
+def expire_overdue_claims(*, donation_id=None):
+    """Expire pending claims past their deadline and return the portions.
+
+    Safe to call often. Returns the number of claims expired.
+    """
+    count = 0
+    with transaction.atomic():
+        overdue = Claim.objects.select_for_update().filter(
+            status=ClaimStatus.PENDING, expires_at__lt=timezone.now()
+        )
+        if donation_id is not None:
+            overdue = overdue.filter(donation_id=donation_id)
+        for claim in overdue:
+            _expire(claim)
+            count += 1
+    return count
+
+
 def create_claim(*, user, donation_id, portions, pickup_time, note=""):
-    """Create a claim atomically, locking the donation row to prevent overbooking."""
+    """Create a claim atomically and reserve its portions on the donation."""
     try:
         with transaction.atomic():
+            expire_overdue_claims(donation_id=donation_id)
             donation = integrations.get_donation(donation_id, lock=True)
             if donation is None:
                 raise ClaimError("Donasi tidak ditemukan.")
 
-            remaining = Claim.remaining_portions(donation.id, donation.total_portions)
-            blocker = get_claim_blocker(user, donation, remaining)
+            blocker = get_claim_blocker(user, donation)
             if blocker:
                 raise ClaimError(blocker)
             if portions > MAX_PORTIONS_PER_CLAIM:
                 raise ClaimError(f"Maksimal {MAX_PORTIONS_PER_CLAIM} porsi per klaim.")
-            if portions > remaining:
-                raise ClaimError(f"Porsi yang tersisa hanya {remaining}.")
+            if portions > donation.available_portions:
+                raise ClaimError(f"Porsi yang tersisa hanya {donation.available_portions}.")
 
             # Small grace period so a slot that just started is still accepted.
             earliest = timezone.now() - timedelta(minutes=5)
@@ -59,7 +94,7 @@ def create_claim(*, user, donation_id, portions, pickup_time, note=""):
             if not (earliest <= pickup_time < donation.pickup_deadline):
                 raise ClaimError("Waktu ambil tidak valid.")
 
-            return Claim.objects.create(
+            claim = Claim.objects.create(
                 recipient=user,
                 donor_id=donation.owner_id,
                 donation_id=donation.id,
@@ -69,61 +104,53 @@ def create_claim(*, user, donation_id, portions, pickup_time, note=""):
                 pickup_deadline=donation.pickup_deadline,
                 portions=portions,
                 pickup_time=pickup_time,
+                expires_at=calculate_expires_at(pickup_time, donation.pickup_deadline),
                 note=note,
             )
+            integrations.adjust_portions(donation.id, -portions)
+            return claim
     except IntegrityError:
-        raise ClaimError("Kamu masih punya klaim aktif untuk donasi ini.")
-
-
-def _close(claim, status):
-    """Move a claim to a closed status (cancelled/rejected) and stamp the time."""
-    claim.status = status
-    claim.closed_at = timezone.now()
-    claim.save(update_fields=["status", "closed_at", "updated_at"])
+        raise ClaimError(
+            "Klaim tidak dapat diproses. Mungkin kamu sudah punya klaim aktif "
+            "untuk donasi ini, atau porsi baru saja habis."
+        )
 
 
 def cancel_claim(claim):
-    """Cancel a claim on behalf of its recipient. Call with a locked row."""
-    if not claim.can_cancel:
-        raise ClaimError("Klaim ini tidak bisa dibatalkan.")
-    _close(claim, ClaimStatus.CANCELLED)
-
-
-def approve_claim(claim):
-    """Approve a pending claim on behalf of the donor. Call with a locked row."""
-    if not claim.can_approve:
-        raise ClaimError("Hanya klaim berstatus Menunggu yang belum kedaluwarsa yang bisa disetujui.")
-    claim.status = ClaimStatus.APPROVED
-    claim.approved_at = timezone.now()
-    claim.save(update_fields=["status", "approved_at", "updated_at"])
-
-
-def reject_claim(claim):
-    """Reject a pending claim on behalf of the donor. Call with a locked row."""
-    if not claim.can_reject:
-        raise ClaimError("Hanya klaim berstatus Menunggu yang bisa ditolak.")
-    _close(claim, ClaimStatus.REJECTED)
-
-
-def delete_claim(claim):
-    """Delete a cancelled, rejected, or expired claim. Call with a locked row."""
-    if not claim.can_delete:
-        raise ClaimError("Hanya klaim yang dibatalkan, ditolak, atau kedaluwarsa yang bisa dihapus.")
-    claim.delete()
-
-
-def verify_pickup(claim):
-    """Mark an approved claim as picked up after its code matched. `claim` may be None."""
-    if claim is None:
-        raise ClaimError("Kode ambil tidak cocok dengan klaim mana pun di donasimu.")
+    """Cancel a pending claim for its recipient and return the portions. Call with a locked row."""
     if claim.status == ClaimStatus.PICKED_UP:
-        raise ClaimError("Kode ini sudah dipakai, makanan sudah diambil.")
-    if claim.status == ClaimStatus.PENDING:
-        raise ClaimError("Klaim ini belum disetujui. Setujui dulu sebelum memverifikasi kode.")
-    if claim.status in (ClaimStatus.CANCELLED, ClaimStatus.REJECTED):
-        raise ClaimError("Klaim ini sudah tidak berlaku.")
-    if claim.is_expired:
-        raise ClaimError("Batas ambil sudah lewat, klaim dianggap tidak diambil.")
+        raise ClaimError("Makanan sudah diambil, klaim tidak bisa dibatalkan.")
+    if claim.status != ClaimStatus.PENDING:
+        raise ClaimError("Klaim ini sudah tidak aktif.")
+    if claim.is_overdue:
+        _expire(claim)
+        raise ClaimError("Klaim ini sudah kedaluwarsa.")
+    claim.status = ClaimStatus.CANCELLED
+    claim.closed_at = timezone.now()
+    claim.save(update_fields=["status", "closed_at", "updated_at"])
+    integrations.adjust_portions(claim.donation_id, claim.portions)
+
+
+def verify_pickup(claim, raw_code):
+    """Verify the code the donor typed; on a match mark the claim as picked up.
+
+    Portions were already reserved at claim time, so the stock does not change here.
+    Call with a locked row.
+    """
+    if claim.status == ClaimStatus.PICKED_UP:
+        raise ClaimError("Klaim ini sudah selesai, makanan sudah diambil.")
+    if claim.status == ClaimStatus.CANCELLED:
+        raise ClaimError("Klaim ini sudah dibatalkan oleh penerima.")
+    if claim.status == ClaimStatus.EXPIRED:
+        raise ClaimError("Klaim ini sudah kedaluwarsa.")
+    if claim.is_overdue:
+        _expire(claim)
+        raise ClaimError("Klaim ini sudah kedaluwarsa.")
+
+    entered = normalize_pickup_code(raw_code).encode()
+    if not entered or not secrets.compare_digest(entered, claim.pickup_code.encode()):
+        raise ClaimError(WRONG_CODE_MESSAGE)
+
     claim.status = ClaimStatus.PICKED_UP
     claim.picked_up_at = timezone.now()
     claim.save(update_fields=["status", "picked_up_at", "updated_at"])

@@ -13,8 +13,5 @@ urlpatterns = [
     path("<int:pk>/cancel/", views.claim_cancel, name="claim_cancel"),
     # Donor
     path("incoming/", views.incoming_claim_list, name="incoming_claim_list"),
-    path("incoming/verify/", views.claim_verify_code, name="claim_verify_code"),
-    path("<int:pk>/approve/", views.claim_approve, name="claim_approve"),
-    path("<int:pk>/reject/", views.claim_reject, name="claim_reject"),
-    path("<int:pk>/delete/", views.claim_delete, name="claim_delete"),
+    path("<int:pk>/verify/", views.claim_verify_code, name="claim_verify_code"),
 ]

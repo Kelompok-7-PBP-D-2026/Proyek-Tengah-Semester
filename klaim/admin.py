@@ -10,12 +10,11 @@ class ClaimAdmin(admin.ModelAdmin):
 
     list_display = (
         "pickup_code", "food_name", "recipient", "donor",
-        "portions", "status", "pickup_time", "created_at",
+        "portions", "status", "pickup_time", "expires_at", "created_at",
     )
     list_filter = ("status",)
     search_fields = ("pickup_code", "food_name", "recipient__username", "donor__username")
     readonly_fields = (
-        "pickup_code", "created_at", "updated_at",
-        "approved_at", "picked_up_at", "closed_at",
+        "pickup_code", "created_at", "updated_at", "picked_up_at", "closed_at",
     )
     raw_id_fields = ("recipient", "donor")

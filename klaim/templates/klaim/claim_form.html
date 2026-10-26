@@ -76,8 +76,7 @@
                     <div class="food-card__body">
                         <h2 class="food-card__title">{{ donation.food_name }}</h2>
                         <p class="food-card__meta">
-                            {{ donation.total_portions }} porsi &middot; {{ donation.donor_name }}{% if donation.distance_km is not None %} &middot; {{ donation.distance_km|id_distance }}{% endif %}
-                        </p>
+                            {{ donation.available_portions }} porsi &middot; {{ donation.donor_name }}{% if donation.distance_km is not None %} &middot; {{ donation.distance_km|id_distance }}{% endif %}                        </p>
                         <div class="food-card__footer">
                             <span class="deadline-badge">Sebelum {{ deadline|id_time }}</span>
                             {% if donation_detail_url %}<a class="claim-btn claim-btn--sunshine claim-btn--sm" href="{{ donation_detail_url }}">Detail</a>{% endif %}

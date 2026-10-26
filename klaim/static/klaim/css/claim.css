@@ -402,3 +402,66 @@ body:has(.claim-page) {
     .claim-page .detail-list { grid-template-columns: 1fr; gap: .15rem; }
     .claim-page .detail-list dd { margin-bottom: .6rem; }
 }
+
+/* ---- Revision: 4 statuses, donor stats, verification modal ---- */
+
+/* Expired looks like cancelled (solid Tomato). */
+.claim-page .status-badge--expired {
+    background-color: var(--claim-tomato);
+    border-color: transparent;
+    color: var(--claim-surface);
+}
+
+/* Solid red button, e.g. "Batalkan klaim" on the detail page. */
+.claim-page .claim-btn--danger { background-color: var(--claim-tomato); color: var(--claim-surface); }
+.claim-page .claim-btn--danger:hover { filter: brightness(.9); }
+
+/* Donor summary cards (3E). */
+.claim-page .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+.claim-page .stat-card { text-align: center; padding: 1.5rem 1rem; }
+.claim-page .stat-card__value {
+    margin: 0;
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: clamp(2.25rem, 6vw, 3.5rem);
+    line-height: 1.1;
+    color: var(--claim-forest);
+}
+.claim-page .stat-card__label { margin: .25rem 0 0; font-size: .9375rem; color: var(--claim-muted); }
+.claim-page .claim-footnote { margin: 1.25rem 0 0; font-size: .8125rem; font-weight: 600; color: var(--claim-muted); }
+
+/* Verification modal (3F/3G). */
+.claim-page .claim-modal {
+    width: min(30rem, calc(100vw - 2rem));
+    padding: 0;
+    border: 0;
+    border-radius: var(--claim-radius-card);
+    color: var(--claim-ink);
+}
+.claim-page .claim-modal::backdrop { background-color: rgba(33, 43, 35, .55); }
+.claim-page .claim-modal__form { margin: 0; padding: 2rem; }
+.claim-page .claim-modal__title {
+    margin: 0 0 .75rem;
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: 1.75rem;
+    color: var(--claim-forest);
+}
+.claim-page .claim-modal__text { margin: 0 0 1.25rem; }
+.claim-page .claim-modal__actions { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; }
+.claim-page .claim-input.is-invalid {
+    border-color: var(--claim-tomato);
+    background-image: none;
+    padding-right: 1rem;
+}
+.claim-page .claim-input.is-invalid:focus { box-shadow: 0 0 0 .2rem rgba(212, 37, 24, .15); }
+
+@media (max-width: 575.98px) {
+    .claim-page .stat-grid { grid-template-columns: 1fr; }
+    .claim-page .claim-modal__form { padding: 1.5rem; }
+}

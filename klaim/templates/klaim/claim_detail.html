@@ -29,17 +29,17 @@
                     </div>
 
                     <p class="claim-lead">
-                        {% if claim.status == 'picked_up' %}
+                        {% with status=claim.display_status %}
+                        {% if status == 'picked_up' %}
                             Makanan sudah diambil. Terima kasih sudah membantu mengurangi limbah makanan!
-                        {% elif claim.status == 'cancelled' or claim.status == 'rejected' %}
-                            Klaim ini sudah tidak berlaku, jadi kode tidak bisa dipakai.
-                        {% elif claim.is_expired %}
-                            Batas ambil sudah lewat, klaim dianggap tidak diambil.
-                        {% elif claim.status == 'pending' %}
-                            Kode ini berlaku setelah donor menyetujui klaim. Ambil sebelum {{ claim.pickup_deadline|id_time }}.
+                        {% elif status == 'cancelled' %}
+                            Klaim dibatalkan, jadi kode ini tidak bisa dipakai.
+                        {% elif status == 'expired' %}
+                            Klaim kedaluwarsa karena makanan tidak diambil tepat waktu, jadi kode ini tidak bisa dipakai.
                         {% else %}
-                            Tunjukkan kode ini ke panitia saat mengambil makanan. Ambil sebelum {{ claim.pickup_deadline|id_time }}.
+                            Tunjukkan kode ini ke panitia saat mengambil makanan. Ambil sebelum {{ claim.expires_at|id_time }}.
                         {% endif %}
+                        {% endwith %}
                     </p>
 
                     <h2 class="claim-card__title">Status klaim</h2>
@@ -65,7 +65,8 @@
                         <dt>Jumlah porsi</dt><dd>{{ claim.portions }} porsi</dd>
                         <dt>Donor</dt><dd>{{ claim.donor_name }}</dd>
                         <dt>Lokasi</dt><dd>{{ claim.pickup_location }}</dd>
-                        <dt>Batas ambil</dt><dd>{{ claim.pickup_deadline|id_datetime }}</dd>
+                        <dt>Waktu ambil</dt><dd>{{ claim.pickup_time|id_datetime }}</dd>
+                        <dt>Batas ambil</dt><dd>{{ claim.expires_at|id_datetime }}</dd>
                         {% if claim.note %}<dt>Catatan</dt><dd>{{ claim.note }}</dd>{% endif %}
                     </dl>
                 </section>
@@ -78,7 +79,7 @@
                     <form method="post" action="{% url 'klaim:claim_cancel' claim.pk %}" data-confirm="Batalkan klaim ini? Porsi akan dikembalikan ke donasi.">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.path }}">
-                        <button type="submit" class="claim-btn claim-btn--outline claim-btn--block">Batalkan klaim</button>
+                        <button type="submit" class="claim-btn claim-btn--danger claim-btn--block">Batalkan klaim</button>
                     </form>
                     {% endif %}
                 </div>

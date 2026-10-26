@@ -7,18 +7,18 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from . import integrations, services
 from .forms import ClaimForm
-from .models import MAX_PORTIONS_PER_CLAIM, Claim, ClaimStatus
+from .models import MAX_PORTIONS_PER_CLAIM, PICKUP_GRACE_MINUTES, Claim, ClaimStatus
 from .services import ClaimError
-from .utils import normalize_pickup_code
 
 CLAIMS_PER_PAGE = 5
+INCOMING_CLAIMS_PER_PAGE = 10
 
 
 # ---- helpers -----------------------------------------------------------
@@ -48,21 +48,28 @@ def _redirect_back(request, default_name):
     return redirect(default_name)
 
 
-def _build_status_filters(queryset, selected):
-    """Build status filter chips with counts."""
-    counts = {
+def _status_counts(queryset):
+    """Return {status: count} for a claim queryset."""
+    return {
         row["status"]: row["total"]
         for row in queryset.order_by().values("status").annotate(total=Count("pk"))
     }
+
+
+def _build_status_filters(queryset, selected):
+    """Build status filter chips (Semua + the 4 statuses) with counts."""
+    counts = _status_counts(queryset)
     filters = [
         {"key": "", "label": "Semua", "count": sum(counts.values()), "active": not selected}
     ]
     for value, label in ClaimStatus.choices:
-        count = counts.get(value, 0)
-        if value == ClaimStatus.REJECTED and count == 0 and selected != value:
-            continue  # the design only shows chips that matter
         filters.append(
-            {"key": value, "label": label, "count": count, "active": selected == value}
+            {
+                "key": value,
+                "label": label,
+                "count": counts.get(value, 0),
+                "active": selected == value,
+            }
         )
     return filters
 
@@ -90,17 +97,17 @@ def claim_create(request, donation_id):
     """Show and process the claim form for one donation."""
     if not integrations.is_recipient(request.user):
         raise PermissionDenied
+    services.expire_overdue_claims(donation_id=donation_id)
     donation = integrations.get_donation(donation_id)
     if donation is None:
         raise Http404("Donasi tidak ditemukan.")
 
-    remaining = Claim.remaining_portions(donation.id, donation.total_portions)
-    blocker = services.get_claim_blocker(request.user, donation, remaining)
+    blocker = services.get_claim_blocker(request.user, donation)
     if blocker:
         messages.error(request, blocker)
         return redirect("klaim:claim_list")
 
-    form_kwargs = {"donation": donation, "remaining_portions": remaining}
+    form_kwargs = {"donation": donation, "remaining_portions": donation.available_portions}
     if request.method == "POST":
         form = ClaimForm(request.POST, **form_kwargs)
         if form.is_valid():
@@ -115,7 +122,7 @@ def claim_create(request, donation_id):
             except ClaimError as error:
                 form.add_error(None, str(error))
             else:
-                messages.success(request, "Klaim terkirim. Tunggu persetujuan donor ya.")
+                messages.success(request, "Klaim terkirim. Tunjukkan kode ambil saat datang.")
                 return redirect("klaim:claim_detail", pk=claim.pk)
     else:
         form = ClaimForm(**form_kwargs)
@@ -127,8 +134,9 @@ def claim_create(request, donation_id):
             "form": form,
             "donation": donation,
             "deadline": donation.pickup_deadline,
-            "remaining": remaining,
+            "remaining": donation.available_portions,
             "max_per_claim": MAX_PORTIONS_PER_CLAIM,
+            "grace_minutes": PICKUP_GRACE_MINUTES,
             "donation_detail_url": integrations.get_donation_detail_url(donation.id),
             "donation_list_url": integrations.get_donation_list_url(),
         },
@@ -138,6 +146,7 @@ def claim_create(request, donation_id):
 @login_required
 def claim_list(request):
     """List the current recipient's claims with status filters and pagination."""
+    services.expire_overdue_claims()
     queryset = Claim.objects.filter(recipient=request.user)
     context = _filtered_page(request, queryset)
     context["donation_list_url"] = integrations.get_donation_list_url()
@@ -147,6 +156,7 @@ def claim_list(request):
 @login_required
 def claim_detail(request, pk):
     """Show one of the recipient's own claims: pickup code, timeline, details."""
+    services.expire_overdue_claims()
     claim = get_object_or_404(Claim, pk=pk, recipient=request.user)
     return render(
         request,
@@ -163,7 +173,7 @@ def claim_detail(request, pk):
 @login_required
 @require_POST
 def claim_cancel(request, pk):
-    """Cancel the recipient's own pending/approved claim (returns the portions)."""
+    """Cancel the recipient's own pending claim (returns the portions)."""
     with transaction.atomic():
         claim = _locked_claim_or_404(pk=pk, recipient=request.user)
         try:
@@ -180,84 +190,49 @@ def claim_cancel(request, pk):
 @login_required
 @donor_required
 def incoming_claim_list(request):
-    """List claims on the current donor's donations."""
+    """List claims on the current donor's donations, with summary counts."""
+    services.expire_overdue_claims()
     queryset = Claim.objects.filter(donor=request.user).select_related("recipient")
-    return render(request, "klaim/incoming_claims.html", _filtered_page(request, queryset))
+    counts = _status_counts(queryset)
+    stats = [
+        {"value": counts.get(ClaimStatus.PENDING, 0), "label": "klaim menunggu diambil"},
+        {"value": counts.get(ClaimStatus.PICKED_UP, 0), "label": "klaim sudah diambil"},
+        {
+            "value": counts.get(ClaimStatus.CANCELLED, 0) + counts.get(ClaimStatus.EXPIRED, 0),
+            "label": "klaim tidak diambil",
+        },
+    ]
+    page_obj = Paginator(queryset, INCOMING_CLAIMS_PER_PAGE).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "klaim/incoming_claims.html",
+        {"page_obj": page_obj, "stats": stats, "extra_query": ""},
+    )
 
 
 @login_required
 @require_POST
 @donor_required
-def claim_approve(request, pk):
-    """Approve a pending claim on the donor's own donation."""
+def claim_verify_code(request, pk):
+    """Verify the pickup code typed by the donor ("Setujui") and finish the claim.
+
+    Answers JSON for the modal (AJAX) and falls back to messages + redirect.
+    """
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     with transaction.atomic():
         claim = _locked_claim_or_404(pk=pk, donor=request.user)
         try:
-            services.approve_claim(claim)
+            services.verify_pickup(claim, request.POST.get("pickup_code", ""))
         except ClaimError as error:
-            messages.error(request, str(error))
+            success, message = False, str(error)
         else:
-            messages.success(request, f"Klaim {claim.pickup_code} disetujui.")
-    return _redirect_back(request, "klaim:incoming_claim_list")
+            success = True
+            message = f"Kode cocok. {claim.portions} porsi {claim.food_name} sudah diserahkan."
 
-
-@login_required
-@require_POST
-@donor_required
-def claim_reject(request, pk):
-    """Reject a pending claim on the donor's own donation (returns the portions)."""
-    with transaction.atomic():
-        claim = _locked_claim_or_404(pk=pk, donor=request.user)
-        try:
-            services.reject_claim(claim)
-        except ClaimError as error:
-            messages.error(request, str(error))
-        else:
-            messages.success(request, f"Klaim {claim.pickup_code} ditolak.")
-    return _redirect_back(request, "klaim:incoming_claim_list")
-
-
-@login_required
-@require_POST
-@donor_required
-def claim_verify_code(request):
-    """Verify a pickup code entered by the donor and mark the claim as picked up."""
-    code = normalize_pickup_code(request.POST.get("pickup_code", ""))
-    if not code:
-        messages.error(request, "Masukkan kode ambil terlebih dahulu.")
-        return redirect("klaim:incoming_claim_list")
-
-    with transaction.atomic():
-        claim = (
-            Claim.objects.select_for_update()
-            .filter(pickup_code=code, donor=request.user)
-            .select_related("recipient")
-            .first()
-        )
-        try:
-            claim = services.verify_pickup(claim)
-        except ClaimError as error:
-            messages.error(request, str(error))
-        else:
-            messages.success(
-                request,
-                f"Kode {claim.pickup_code} cocok. {claim.portions} porsi "
-                f"{claim.food_name} sudah diserahkan.",
-            )
+    if success:
+        messages.success(request, message)
+    if is_ajax:
+        return JsonResponse({"ok": success, "message": message}, status=200 if success else 400)
+    if not success:
+        messages.error(request, message)
     return redirect("klaim:incoming_claim_list")
-
-
-@login_required
-@require_POST
-@donor_required
-def claim_delete(request, pk):
-    """Delete a cancelled, rejected, or expired claim on the donor's own donation."""
-    with transaction.atomic():
-        claim = _locked_claim_or_404(pk=pk, donor=request.user)
-        try:
-            services.delete_claim(claim)
-        except ClaimError as error:
-            messages.error(request, str(error))
-        else:
-            messages.success(request, "Klaim berhasil dihapus.")
-    return _redirect_back(request, "klaim:incoming_claim_list")

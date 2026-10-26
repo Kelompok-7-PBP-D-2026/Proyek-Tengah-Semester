@@ -115,19 +115,31 @@ def edit_profil(request):
 
 
 def daftar_donor(request):
-    """Daftar donor + filter jenis (?jenis=...)."""
+    """Daftar donor + filter jenis (?jenis=) dan pencarian nama unit (?q=).
+
+    Permintaan dari HTMX (header HX-Request) hanya dibalas panel hasilnya, supaya
+    filter dan pencarian berjalan tanpa memuat ulang halaman.
+    """
     jenis = request.GET.get("jenis", "")
+    kata_kunci = request.GET.get("q", "").strip()
     donor_qs = ProfilDonor.objects.all()
     if jenis in JenisDonor.values:
         donor_qs = donor_qs.filter(jenis=jenis)
     else:
         jenis = ""
-    return render(request, "profil/daftar_donor.html", {
+    if kata_kunci:
+        donor_qs = donor_qs.filter(nama_unit__icontains=kata_kunci)
+
+    context = {
         "donor_list": donor_qs,
         "jenis_aktif": jenis,
         "jenis_choices": JenisDonor.choices,
+        "kata_kunci": kata_kunci,
         "jumlah": donor_qs.count(),
-    })
+    }
+    if request.headers.get("HX-Request") == "true":
+        return render(request, "profil/partials/daftar_donor_panel.html", context)
+    return render(request, "profil/daftar_donor.html", context)
 
 
 def detail_donor(request, pk):

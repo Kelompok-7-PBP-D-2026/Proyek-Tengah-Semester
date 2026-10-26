@@ -103,6 +103,68 @@ class DaftarDonorListTest(TestCase):
         self.assertContains(response, "Belum ada donor terdaftar")
 
 
+class DaftarDonorHtmxTest(TestCase):
+    """Filter dan pencarian daftar donor lewat HTMX (tanpa memuat ulang halaman)."""
+
+    def setUp(self):
+        u1 = User.objects.create_user("u1", password="rahasia-123")
+        u2 = User.objects.create_user("u2", password="rahasia-123")
+        ProfilDonor.objects.create(
+            user=u1, nama_unit="Kantin Fasilkom",
+            jenis=JenisDonor.KANTIN, kontak="k@x",
+        )
+        ProfilDonor.objects.create(
+            user=u2, nama_unit="Panitia Wisuda",
+            jenis=JenisDonor.PANITIA, kontak="p@x",
+        )
+
+    def test_permintaan_htmx_hanya_membalas_panel(self):
+        response = self.client.get(reverse("profil:daftar_donor"), HTTP_HX_REQUEST="true")
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "profil/partials/daftar_donor_panel.html")
+        self.assertTemplateNotUsed(response, "base.html")
+        self.assertNotContains(response, "<html")
+
+    def test_permintaan_biasa_mengembalikan_halaman_penuh(self):
+        response = self.client.get(reverse("profil:daftar_donor"))
+        self.assertTemplateUsed(response, "base.html")
+        self.assertContains(response, "<html")
+
+    def test_filter_jenis_lewat_htmx(self):
+        response = self.client.get(
+            reverse("profil:daftar_donor"), {"jenis": "kantin"}, HTTP_HX_REQUEST="true"
+        )
+        self.assertContains(response, "Kantin Fasilkom")
+        self.assertNotContains(response, "Panitia Wisuda")
+
+    def test_pencarian_nama_unit(self):
+        response = self.client.get(
+            reverse("profil:daftar_donor"), {"q": "wisuda"}, HTTP_HX_REQUEST="true"
+        )
+        self.assertContains(response, "Panitia Wisuda")
+        self.assertNotContains(response, "Kantin Fasilkom")
+
+    def test_filter_dan_pencarian_bersamaan(self):
+        response = self.client.get(
+            reverse("profil:daftar_donor"), {"jenis": "kantin", "q": "wisuda"},
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertNotContains(response, "Kantin Fasilkom")
+        self.assertContains(response, "Belum ada donor terdaftar")
+
+    def test_panel_memuat_atribut_dan_jenis_aktif(self):
+        response = self.client.get(reverse("profil:daftar_donor"), {"jenis": "kantin"})
+        self.assertContains(response, 'id="daftar-donor-panel"')
+        self.assertContains(response, 'hx-target="#daftar-donor-panel"')
+        self.assertContains(response, 'name="jenis" value="kantin"')
+
+
+class HtmxAssetTest(TestCase):
+    def test_htmx_dimuat_di_base_template(self):
+        response = self.client.get("/")
+        self.assertContains(response, "htmx.min.js")
+
+
 class DetailDonorAuthTest(TestCase):
     def setUp(self):
         user = User.objects.create_user("kontakku", password="rahasia-123")

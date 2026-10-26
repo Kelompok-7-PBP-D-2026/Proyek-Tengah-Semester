@@ -5,42 +5,36 @@
 {% block content %}
 <section class="container py-5">
     <h1 class="font-display h3 text-uppercase text-forest mb-1">Mitra <span class="text-carrot">Donor</span></h1>
-    <p class="text-muted mb-4">{{ jumlah }} penyelenggara terdaftar</p>
+    <p class="text-muted mb-4">Cari mitra donor berdasarkan jenis atau nama unit. Hasil diperbarui tanpa memuat ulang halaman.</p>
 
-    <div class="d-flex flex-wrap gap-2 mb-4">
-        <a href="{% url 'profil:daftar_donor' %}"
-           class="chip text-decoration-none {% if not jenis_aktif %}{% else %}bg-cream text-forest border{% endif %}">Semua</a>
-        {% for nilai, label in jenis_choices %}
-        <a href="?jenis={{ nilai }}"
-           class="chip text-decoration-none {% if jenis_aktif != nilai %}bg-cream text-forest border{% endif %}">{{ label }}</a>
-        {% endfor %}
-    </div>
+    {% comment %}
+    Kotak pencarian ada di luar #daftar-donor-panel supaya fokus dan posisi kursor
+    tidak hilang saat panel hasilnya diganti HTMX. Nilai jenis yang sedang aktif
+    dikirim lewat hx-include dari input tersembunyi di dalam panel.
+    Tanpa JavaScript, chip tetap berfungsi penuh (href-nya sudah membawa jenis +
+    kata kunci), sedangkan formulir "Cari" hanya mengirim kata kunci saja.
+    {% endcomment %}
+    <form class="row g-2 align-items-end mb-4" method="get" action="{% url 'profil:daftar_donor' %}">
+        <div class="col-sm-6 col-lg-4">
+            <label class="form-label small fw-semibold" for="filter-q">Cari nama unit</label>
+            <input type="search" class="form-control" id="filter-q" name="q" value="{{ kata_kunci }}"
+                   placeholder="mis. Kantin"
+                   hx-get="{% url 'profil:daftar_donor' %}"
+                   hx-include="[name='jenis']"
+                   hx-target="#daftar-donor-panel"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#daftar-donor-loading"
+                   hx-trigger="input changed delay:400ms, search">
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-mbg-outline-green" type="submit">Cari</button>
+        </div>
+        <div class="col-auto">
+            <span id="daftar-donor-loading" class="htmx-indicator text-muted small">Memuat…</span>
+        </div>
+    </form>
 
-    <div class="row g-3">
-        {% for donor in donor_list %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <span class="chip mb-2">{{ donor.get_jenis_display }}</span>
-                    <h2 class="card-title h6 text-forest fw-bold">{{ donor.nama_unit }}</h2>
-                    {% if donor.terverifikasi %}
-                    <span class="badge-deadline px-3 py-1 small">Terverifikasi</span>
-                    {% endif %}
-                    <div class="mt-3">
-                        <a class="btn btn-mbg-outline-green btn-sm" href="{% url 'profil:detail_donor' donor.pk %}">Lihat detail</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <p class="text-muted mb-0">Belum ada donor terdaftar untuk jenis ini.</p>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
+    {% include "profil/partials/daftar_donor_panel.html" %}
 </section>
 {% endblock %}

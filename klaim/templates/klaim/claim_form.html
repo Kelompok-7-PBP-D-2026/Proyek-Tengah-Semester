@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static claim_extras %}
+
+{% block title %}Klaim Makanan — MBG{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'klaim/css/claim.css' %}">
+
+<div class="claim-page">
+    <div class="claim-container">
+        {% include "klaim/_messages.html" %}
+
+        <nav class="claim-breadcrumb" aria-label="Breadcrumb">
+            {% if donation_list_url %}<a href="{{ donation_list_url }}">Cari makanan</a>{% else %}<span>Cari makanan</span>{% endif %}
+            <span aria-hidden="true">&rsaquo;</span>
+            {% if donation_detail_url %}<a href="{{ donation_detail_url }}">{{ donation.food_name }}</a>{% else %}<span>{{ donation.food_name }}</span>{% endif %}
+            <span aria-hidden="true">&rsaquo;</span>
+            <span aria-current="page">Klaim</span>
+        </nav>
+
+        <h1 class="claim-title">Klaim <span class="claim-title__accent">Makanan</span></h1>
+
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <form method="post" class="claim-card" novalidate>
+                    {% csrf_token %}
+                    <h2 class="claim-card__title">Detail klaim</h2>
+
+                    {% if form.non_field_errors %}
+                    <div class="claim-alert claim-alert--error">{{ form.non_field_errors|join:" " }}</div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="claim-label" for="{{ form.portions.id_for_label }}">Jumlah porsi</label>
+                            {{ form.portions }}
+                            {% for error in form.portions.errors %}<p class="claim-error">{{ error }}</p>{% endfor %}
+                            <p class="claim-hint">Maksimal {{ max_per_claim }} porsi per klaim, tersisa {{ remaining }}.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="claim-label" for="{{ form.pickup_time.id_for_label }}">Waktu ambil</label>
+                            {{ form.pickup_time }}
+                            {% for error in form.pickup_time.errors %}<p class="claim-error">{{ error }}</p>{% endfor %}
+                            <p class="claim-hint">Pilih sebelum {{ deadline|id_time }}.</p>
+                        </div>
+                        <div class="col-12">
+                            <label class="claim-label" for="{{ form.note.id_for_label }}">Catatan untuk donor</label>
+                            {{ form.note }}
+                            {% for error in form.note.errors %}<p class="claim-error">{{ error }}</p>{% endfor %}
+                            <div class="claim-hint-row">
+                                <p class="claim-hint">Opsional, maksimal 140 huruf.</p>
+                                <p class="claim-hint" id="note-counter" aria-live="polite">{{ form.note.value|default_if_none:""|length }}/140</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="claim-notice" role="note">
+                        Ambil makanan sebelum {{ deadline|id_time }}. Setelah itu klaim dianggap tidak diambil.
+                    </div>
+
+                    <div class="claim-actions">
+                        <a class="claim-btn claim-btn--outline" href="{% if donation_detail_url %}{{ donation_detail_url }}{% else %}{% url 'klaim:claim_list' %}{% endif %}">Batal</a>
+                        <button type="submit" class="claim-btn claim-btn--kiwi">Kirim klaim</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="col-lg-4">
+                <article class="claim-card claim-card--flush food-card">
+                    <div class="food-card__media">
+                        <span class="status-badge status-badge--available">
+                            <span class="status-badge__dot" aria-hidden="true"></span>Tersedia
+                        </span>
+                        {% include "klaim/_food_icon.html" %}
+                    </div>
+                    <div class="food-card__body">
+                        <h2 class="food-card__title">{{ donation.food_name }}</h2>
+                        <p class="food-card__meta">
+                            {{ donation.total_portions }} porsi &middot; {{ donation.donor_name }}{% if donation.distance_km is not None %} &middot; {{ donation.distance_km|id_distance }}{% endif %}
+                        </p>
+                        <div class="food-card__footer">
+                            <span class="deadline-badge">Sebelum {{ deadline|id_time }}</span>
+                            {% if donation_detail_url %}<a class="claim-btn claim-btn--sunshine claim-btn--sm" href="{{ donation_detail_url }}">Detail</a>{% endif %}
+                        </div>
+                    </div>
+                </article>
+
+                <section class="claim-card claim-card--spaced">
+                    <h2 class="claim-card__title">Ringkasan</h2>
+                    <dl class="detail-list">
+                        <dt>Donor</dt><dd>{{ donation.donor_name }}</dd>
+                        <dt>Lokasi ambil</dt><dd>{{ donation.pickup_location }}</dd>
+                        <dt>Jarak</dt><dd>{% if donation.distance_km is not None %}{{ donation.distance_km|id_distance }}{% else %}-{% endif %}</dd>
+                    </dl>
+                </section>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'klaim/js/claim.js' %}" defer></script>
+{% endblock %}

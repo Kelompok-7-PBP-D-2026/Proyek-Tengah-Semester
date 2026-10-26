@@ -1,0 +1,404 @@
+/* Claim module styles. Everything is scoped under .claim-page so it cannot
+   clash with the team's global CSS. Colors come from the team's --mbg-*
+   tokens (static/css/style.css); hex values below are only fallbacks. */
+
+/* The only rule outside the scope: lighter page background, applied only
+   when a claim page is rendered (matches the Figma cream tone). */
+body:has(.claim-page) {
+    background-color: color-mix(in srgb, var(--mbg-cream, #F3E8CC) 35%, #fff);
+}
+
+.claim-page {
+    --claim-forest: var(--mbg-forest, #19532B);
+    --claim-sunshine: var(--mbg-sunshine, #FFCA26);
+    --claim-cream: var(--mbg-cream, #F3E8CC);
+    --claim-carrot: var(--mbg-carrot, #F86015);
+    --claim-kiwi: var(--mbg-kiwi, #9ABC04);
+    --claim-tomato: var(--mbg-tomato, #D42518);
+    --claim-ink: #212b23;
+    --claim-muted: color-mix(in srgb, var(--claim-forest) 70%, #fff);
+    --claim-surface: #fff;
+    --claim-page-bg: color-mix(in srgb, var(--claim-cream) 35%, #fff);
+    --claim-radius-input: 12px;
+    --claim-radius-card: 20px;
+    --claim-radius-pill: 9999px;
+
+    font-family: "Poppins", system-ui, sans-serif;
+    color: var(--claim-ink);
+    background-color: var(--claim-page-bg);
+    padding: 2.5rem 0 4rem;
+}
+
+.claim-page .claim-container {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 clamp(1rem, 4vw, 3rem);
+}
+
+/* ---- Headings ---- */
+.claim-page .claim-eyebrow {
+    margin: 0 0 .5rem;
+    font-weight: 700;
+    font-size: .75rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--claim-carrot);
+}
+.claim-page .claim-title {
+    margin: 0 0 1.5rem;
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: clamp(1.9rem, 4vw, 2.5rem);
+    letter-spacing: .01em;
+    text-transform: uppercase;
+    color: var(--claim-forest);
+}
+.claim-page .claim-title__accent { color: var(--claim-carrot); }
+
+.claim-page .claim-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: 1.25rem;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--claim-muted);
+}
+.claim-page .claim-breadcrumb a { color: inherit; text-decoration: none; }
+.claim-page .claim-breadcrumb a:hover { color: var(--claim-forest); text-decoration: underline; }
+
+/* ---- Cards ---- */
+.claim-page .claim-card {
+    background-color: var(--claim-surface);
+    border-radius: var(--claim-radius-card);
+    padding: 1.75rem;
+}
+.claim-page .claim-card--flush { padding: 0; overflow: hidden; }
+.claim-page .claim-card--spaced { margin-top: 1.25rem; }
+.claim-page .claim-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.claim-page .claim-card__header .claim-eyebrow { margin: 0; }
+.claim-page .claim-card__title {
+    margin: 0 0 1rem;
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: var(--claim-forest);
+}
+.claim-page .claim-lead { margin: 1rem 0 1.5rem; font-size: 1rem; }
+
+/* ---- Form ---- */
+.claim-page .claim-label {
+    display: block;
+    margin-bottom: .4rem;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--claim-forest);
+}
+.claim-page .claim-input {
+    min-height: 3.1rem;
+    padding: .6rem 1rem;
+    border: 2px solid var(--claim-cream);
+    border-radius: var(--claim-radius-input);
+    background-color: var(--claim-surface);
+    color: var(--claim-ink);
+    font-family: "Poppins", system-ui, sans-serif;
+    font-size: 1rem;
+}
+.claim-page .claim-input:focus {
+    border-color: var(--claim-forest);
+    box-shadow: 0 0 0 .2rem rgba(25, 83, 43, .15);
+}
+.claim-page .claim-hint {
+    margin: .4rem 0 0;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--claim-muted);
+}
+.claim-page .claim-hint-row { display: flex; justify-content: space-between; gap: 1rem; }
+.claim-page .claim-error {
+    margin: .4rem 0 0;
+    font-size: .8125rem;
+    font-weight: 600;
+    color: var(--claim-tomato);
+}
+.claim-page .claim-notice {
+    margin: 1.25rem 0;
+    padding: .9rem 1rem;
+    border-radius: var(--claim-radius-input);
+    background-color: var(--claim-sunshine);
+    color: var(--claim-forest);
+    font-weight: 600;
+    font-size: .9375rem;
+}
+.claim-page .claim-actions { display: flex; justify-content: space-between; gap: 1rem; }
+
+/* ---- Alerts (Django messages) ---- */
+.claim-page .claim-messages { margin-bottom: 1.25rem; display: grid; gap: .5rem; }
+.claim-page .claim-alert {
+    padding: .8rem 1rem;
+    border-radius: var(--claim-radius-input);
+    font-weight: 600;
+    font-size: .9375rem;
+    background-color: color-mix(in srgb, var(--claim-sunshine) 35%, #fff);
+    color: var(--claim-forest);
+}
+.claim-page .claim-alert--success {
+    background-color: color-mix(in srgb, var(--claim-kiwi) 30%, #fff);
+}
+.claim-page .claim-alert--error {
+    background-color: color-mix(in srgb, var(--claim-tomato) 12%, #fff);
+    color: var(--claim-tomato);
+}
+.claim-page .claim-card .claim-alert { margin-bottom: 1rem; }
+
+/* ---- Buttons ---- */
+.claim-page .claim-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .7rem 1.4rem;
+    border: 2px solid transparent;
+    border-radius: var(--claim-radius-input);
+    font-family: "Poppins", system-ui, sans-serif;
+    font-weight: 600;
+    font-size: .9375rem;
+    line-height: 1.3;
+    text-decoration: none;
+    cursor: pointer;
+    transition: filter .15s ease, background-color .15s ease, color .15s ease;
+}
+.claim-page .claim-btn:hover { filter: brightness(.94); }
+.claim-page .claim-btn:disabled,
+.claim-page .claim-btn.is-loading { opacity: .6; cursor: progress; }
+.claim-page .claim-btn--sm { padding: .45rem 1rem; font-size: .875rem; }
+.claim-page .claim-btn--block { display: flex; width: 100%; padding-block: .85rem; }
+.claim-page .claim-btn--forest { background-color: var(--claim-forest); color: var(--claim-cream); }
+.claim-page .claim-btn--carrot { background-color: var(--claim-carrot); color: var(--claim-surface); }
+.claim-page .claim-btn--kiwi { background-color: var(--claim-kiwi); color: var(--claim-ink); }
+.claim-page .claim-btn--sunshine { background-color: var(--claim-sunshine); color: var(--claim-ink); }
+.claim-page .claim-btn--outline {
+    background-color: transparent;
+    border-color: var(--claim-forest);
+    color: var(--claim-forest);
+}
+.claim-page .claim-btn--outline:hover { background-color: var(--claim-forest); color: var(--claim-surface); filter: none; }
+.claim-page .claim-btn--danger-outline {
+    background-color: transparent;
+    border-color: var(--claim-tomato);
+    color: var(--claim-tomato);
+}
+.claim-page .claim-btn--danger-outline:hover { background-color: var(--claim-tomato); color: var(--claim-surface); filter: none; }
+
+/* ---- Badges ---- */
+.claim-page .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .3rem .8rem;
+    border: 1.5px solid transparent;
+    border-radius: var(--claim-radius-pill);
+    font-size: .8125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+.claim-page .status-badge__dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background-color: currentColor;
+}
+.claim-page .status-badge--pending { background-color: var(--claim-sunshine); color: var(--claim-ink); }
+.claim-page .status-badge--approved,
+.claim-page .status-badge--available { background-color: var(--claim-kiwi); color: var(--claim-ink); }
+.claim-page .status-badge--picked-up {
+    background-color: var(--claim-cream);
+    border-color: var(--claim-forest);
+    color: var(--claim-forest);
+}
+.claim-page .status-badge--cancelled,
+.claim-page .status-badge--rejected { background-color: var(--claim-tomato); color: var(--claim-surface); }
+.claim-page .status-badge--expired {
+    background-color: var(--claim-surface);
+    border-color: var(--claim-tomato);
+    color: var(--claim-tomato);
+}
+.claim-page .deadline-badge {
+    display: inline-block;
+    padding: .35rem .9rem;
+    border-radius: var(--claim-radius-pill);
+    background-color: var(--claim-tomato);
+    color: var(--claim-surface);
+    font-size: .8125rem;
+    font-weight: 600;
+}
+
+/* ---- Food card (claim form) ---- */
+.claim-page .food-card__media {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 7.4rem;
+    padding: .75rem 1.5rem;
+    background-color: var(--claim-sunshine);
+}
+.claim-page .food-card__media .status-badge { position: absolute; top: .75rem; left: .75rem; }
+.claim-page .food-card__icon { width: 6.2rem; height: auto; }
+.claim-page .food-card__body { padding: 1.1rem 1.25rem 1.25rem; }
+.claim-page .food-card__title {
+    margin: 0 0 .35rem;
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: var(--claim-forest);
+}
+.claim-page .food-card__meta { margin: 0 0 .9rem; font-size: .8125rem; font-weight: 600; color: var(--claim-muted); }
+.claim-page .food-card__footer { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+
+/* ---- Definition list (summary / details) ---- */
+.claim-page .detail-list {
+    display: grid;
+    grid-template-columns: minmax(6rem, 9rem) 1fr;
+    gap: .85rem 1rem;
+    margin: 0;
+}
+.claim-page .detail-list dt { font-size: .8125rem; font-weight: 600; color: var(--claim-muted); padding-top: .15rem; }
+.claim-page .detail-list dd { margin: 0; font-size: .9375rem; }
+
+/* ---- Pickup code + timeline ---- */
+.claim-page .pickup-code {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.9rem 1rem;
+    border-radius: var(--claim-radius-card);
+    background-color: var(--claim-cream);
+}
+.claim-page .pickup-code__value {
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: clamp(2.4rem, 7vw, 4rem);
+    letter-spacing: .04em;
+    color: var(--claim-forest);
+}
+.claim-page .pickup-code--inactive .pickup-code__value { opacity: .4; text-decoration: line-through; }
+
+.claim-page .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.claim-page .timeline__item { display: flex; align-items: flex-start; gap: .85rem; }
+.claim-page .timeline__dot {
+    flex: none;
+    width: 1.25rem; height: 1.25rem;
+    margin-top: .2rem;
+    border: 2px solid var(--claim-forest);
+    border-radius: 50%;
+}
+.claim-page .timeline__dot--done { background-color: var(--claim-forest); }
+.claim-page .timeline__dot--failed { background-color: var(--claim-tomato); border-color: var(--claim-tomato); }
+.claim-page .timeline__label { margin: 0; font-weight: 600; color: var(--claim-forest); }
+.claim-page .timeline__caption { margin: 0; font-size: .8125rem; font-weight: 600; color: var(--claim-muted); }
+.claim-page .claim-side-actions { display: grid; gap: .85rem; margin-top: 1.25rem; }
+
+/* ---- Filter chips ---- */
+.claim-page .filter-chips { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.5rem; }
+.claim-page .filter-chip {
+    padding: .4rem 1rem;
+    border: 1.5px solid var(--claim-forest);
+    border-radius: var(--claim-radius-pill);
+    background-color: var(--claim-surface);
+    color: var(--claim-forest);
+    font-size: .8125rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+.claim-page .filter-chip:hover { background-color: var(--claim-cream); }
+.claim-page .filter-chip--active { background-color: var(--claim-forest); color: var(--claim-cream); }
+.claim-page .filter-chip--active:hover { background-color: var(--claim-forest); }
+
+/* ---- Table ---- */
+.claim-page .claim-table-wrap {
+    background-color: var(--claim-surface);
+    border-radius: var(--claim-radius-card);
+    overflow: hidden;
+}
+.claim-page .claim-table { width: 100%; min-width: 46rem; border-collapse: collapse; }
+.claim-page .claim-table th {
+    padding: .85rem 1.25rem;
+    background-color: var(--claim-cream);
+    color: var(--claim-forest);
+    font-size: .8125rem;
+    font-weight: 600;
+    text-align: left;
+}
+.claim-page .claim-table td {
+    padding: 1.1rem 1.25rem;
+    border-bottom: 1px solid var(--claim-cream);
+    font-size: .9375rem;
+    vertical-align: middle;
+}
+.claim-page .claim-table tbody tr:last-child td { border-bottom: 0; }
+.claim-page .claim-table__link { color: inherit; text-decoration: none; }
+.claim-page .claim-table__link:hover { color: var(--claim-forest); text-decoration: underline; }
+.claim-page .claim-table__note { display: block; margin-top: .2rem; font-size: .75rem; font-weight: 600; color: var(--claim-muted); }
+.claim-page .claim-muted-text { font-size: .8125rem; font-weight: 600; color: var(--claim-muted); }
+.claim-page .claim-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.claim-page .claim-empty { text-align: center; padding: 3rem 1.5rem; }
+.claim-page .claim-empty__text { margin: 0 0 1rem; font-weight: 600; color: var(--claim-muted); }
+
+/* ---- Pagination ---- */
+.claim-page .claim-pagination { display: flex; justify-content: center; gap: .6rem; margin-top: 1.75rem; }
+.claim-page .claim-pagination__item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem; height: 2.5rem;
+    border: 1.5px solid var(--claim-cream);
+    border-radius: var(--claim-radius-input);
+    background-color: var(--claim-surface);
+    color: var(--claim-forest);
+    font-size: .875rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+.claim-page a.claim-pagination__item:hover { background-color: var(--claim-cream); }
+.claim-page .claim-pagination__item--active { background-color: var(--claim-forest); border-color: var(--claim-forest); color: var(--claim-cream); }
+
+/* ---- Donor verify card ---- */
+.claim-page .verify-card { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; margin-bottom: 1.5rem; }
+.claim-page .verify-card__field { flex: 1 1 14rem; max-width: 22rem; }
+.claim-page .verify-card .claim-btn { margin-bottom: 1.45rem; }
+
+/* ---- Confirm dialog (created by claim.js inside .claim-page) ---- */
+.claim-page .claim-confirm {
+    width: min(26rem, calc(100vw - 2rem));
+    padding: 0;
+    border: 0;
+    border-radius: var(--claim-radius-card);
+    color: var(--claim-ink);
+}
+.claim-page .claim-confirm::backdrop { background-color: rgba(0, 0, 0, .45); }
+.claim-page .claim-confirm__form { padding: 1.75rem; margin: 0; }
+.claim-page .claim-confirm__title {
+    margin: 0 0 .5rem;
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: var(--claim-forest);
+}
+.claim-page .claim-confirm__message { margin: 0 0 1.5rem; }
+.claim-page .claim-confirm__actions { display: flex; justify-content: flex-end; gap: .75rem; }
+
+/* ---- Responsive ---- */
+@media (max-width: 575.98px) {
+    .claim-page { padding-top: 1.5rem; }
+    .claim-page .claim-card { padding: 1.25rem; }
+    .claim-page .claim-card--flush { padding: 0; }
+    .claim-page .detail-list { grid-template-columns: 1fr; gap: .15rem; }
+    .claim-page .detail-list dd { margin-bottom: .6rem; }
+}

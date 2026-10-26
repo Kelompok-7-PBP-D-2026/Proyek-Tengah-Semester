@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% load static claim_extras %}
+
+{% block title %}Klaim Saya — MBG{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'klaim/css/claim.css' %}">
+
+<div class="claim-page">
+    <div class="claim-container">
+        {% include "klaim/_messages.html" %}
+
+        <p class="claim-eyebrow">Riwayat</p>
+        <h1 class="claim-title">Klaim <span class="claim-title__accent">Saya</span></h1>
+
+        <div class="filter-chips" role="navigation" aria-label="Filter status">
+            {% for item in status_filters %}
+            <a class="filter-chip{% if item.active %} filter-chip--active{% endif %}" href="?{% if item.key %}status={{ item.key }}{% endif %}">{{ item.label }} ({{ item.count }})</a>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.object_list %}
+        <div class="claim-table-wrap">
+            <div class="table-responsive">
+                <table class="claim-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Makanan</th>
+                            <th scope="col">Donor</th>
+                            <th scope="col">Porsi</th>
+                            <th scope="col">Waktu ambil</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for claim in page_obj %}
+                        <tr>
+                            <td><a class="claim-table__link" href="{% url 'klaim:claim_detail' claim.pk %}">{{ claim.food_name }}</a></td>
+                            <td>{{ claim.donor_name }}</td>
+                            <td>{{ claim.portions }}</td>
+                            <td class="text-nowrap">{{ claim.pickup_time|id_datetime_short }}</td>
+                            <td>{% include "klaim/_status_badge.html" %}</td>
+                            <td>
+                                {% if claim.can_cancel %}
+                                <form method="post" action="{% url 'klaim:claim_cancel' claim.pk %}" data-confirm="Batalkan klaim ini? Porsi akan dikembalikan ke donasi.">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button type="submit" class="claim-btn claim-btn--outline claim-btn--sm">Batalkan</button>
+                                </form>
+                                {% else %}
+                                <span class="claim-muted-text">Tidak ada aksi</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% include "klaim/_pagination.html" %}
+        {% else %}
+        <div class="claim-card claim-empty">
+            <p class="claim-empty__text">Belum ada klaim{% if selected_status %} dengan status ini{% endif %}.</p>
+            <a class="claim-btn claim-btn--carrot" href="{% if selected_status %}{% url 'klaim:claim_list' %}{% elif donation_list_url %}{{ donation_list_url }}{% else %}/{% endif %}">{% if selected_status %}Lihat semua klaim{% else %}Cari makanan{% endif %}</a>        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="{% static 'klaim/js/claim.js' %}" defer></script>
+{% endblock %}

@@ -18,14 +18,17 @@ Buka `http://127.0.0.1:8000/donasi/` dan masuk menggunakan akun yang dibuat.
 Superuser dapat mencoba fitur donor, tetapi tombol edit/hapus pada halaman donasi
 tetap hanya berlaku untuk donasi miliknya sendiri.
 
-Untuk akun biasa, buat melalui Django Admin (`/admin/`), kemudian berikan grup Donor:
+Untuk akun biasa, buat melalui Django Admin (`/admin/`), lalu beri akses donor
+dengan membuat profil donor:
 
 ```powershell
 python manage.py grant_donor username_akun
 ```
 
-Perintah ini hanya mengubah grup akun yang sudah ada dan tidak membuat kata sandi.
-Akun tanpa grup Donor dapat membaca donasi, tetapi tidak dapat mengelolanya.
+Perintah ini membuat `ProfilDonor` untuk akun yang sudah ada dan tidak membuat akun
+atau kata sandi baru. Akun yang mendaftar sendiri lewat `/daftar/` sebagai donor
+otomatis punya profil donor. Akun tanpa profil donor dapat membaca donasi, tetapi
+tidak dapat mengelolanya.
 
 ## Data contoh
 
@@ -90,8 +93,8 @@ atau data contoh yang otomatis dibuat saat aplikasi dijalankan.
 | `/donasi/<id>/edit/` | GET, POST | Form dan simpan perubahan milik sendiri |
 | `/donasi/<id>/hapus/` | GET, POST | Konfirmasi dan hapus milik sendiri |
 | `/donasi/<id>/foto/` | GET | File foto, termasuk saat DEBUG=False |
-| `/donasi/masuk/` | GET, POST | Login bawaan Django sementara |
-| `/donasi/keluar/` | POST | Logout |
+| `/donasi/masuk/` | GET, POST | Login bawaan Django; halaman utama memakai `/akun/login/` |
+| `/donasi/keluar/` | POST | Logout; navbar memakai `/akun/logout/` |
 
 Parameter filter: `q`, `lokasi`, `waktu` (`hari_ini`, `besok`, `pekan_ini`),
 `status` (`tersedia`, `habis`, dihitung dari stok), `mine=1`, dan `page`.
@@ -104,11 +107,13 @@ adalah API internal aplikasi, **bukan pengganti kewajiban Public API eksternal**
 Model profil, venue, dan klaim belum tersedia saat implementasi modul ini.
 Implementasi sementara sengaja tidak menambahkan model ke app milik anggota lain.
 
-1. **Profil (Fikri):** donor berelasi ke `settings.AUTH_USER_MODEL` melalui
-   `Donasi.donor` (`related_name='donasi'`). Adapter role berada di
-   `donasi/permissions.py`, saat ini memakai grup `Donor` atau superuser aktif.
-   Setelah profil tersedia, sesuaikan adapter tersebut dan arahkan login/logout
-   serta tautan profil ke autentikasi bersama. Tidak perlu membuat akun donor kedua.
+1. **Profil (Fikri):** sudah tersambung. Donor berelasi ke `settings.AUTH_USER_MODEL`
+   melalui `Donasi.donor` (`related_name='donasi'`), dan adapter role di
+   `donasi/permissions.py` memakai `ProfilDonor` (plus superuser aktif) sebagai
+   penentu akses donor. Login/logout, tautan profil di navbar dan footer, serta
+   halaman detail memakai autentikasi bersama `/akun/` dari `django.contrib.auth`.
+   Rute `/donasi/masuk/` dan `/donasi/keluar/` tetap ada demi kompatibilitas.
+   Tidak perlu membuat akun donor kedua.
 2. **Venue (Marvin):** `lokasi` saat ini teks maksimal 200 karakter. Setelah model
    venue disepakati, buat relasi ForeignKey dan migrasi data teks yang sudah ada;
    sesuaikan form dan filter. Public API OpenStreetMap, data venue dari API,

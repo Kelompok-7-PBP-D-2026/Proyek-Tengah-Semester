@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar Donor — MBG{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+    <h1 class="font-display h3 text-uppercase text-forest mb-1">Mitra <span class="text-carrot">Donor</span></h1>
+    <p class="text-muted mb-4">{{ jumlah }} penyelenggara terdaftar</p>
+
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <a href="{% url 'profil:daftar_donor' %}"
+           class="chip text-decoration-none {% if not jenis_aktif %}{% else %}bg-cream text-forest border{% endif %}">Semua</a>
+        {% for nilai, label in jenis_choices %}
+        <a href="?jenis={{ nilai }}"
+           class="chip text-decoration-none {% if jenis_aktif != nilai %}bg-cream text-forest border{% endif %}">{{ label }}</a>
+        {% endfor %}
+    </div>
+
+    <div class="row g-3">
+        {% for donor in donor_list %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <span class="chip mb-2">{{ donor.get_jenis_display }}</span>
+                    <h2 class="card-title h6 text-forest fw-bold">{{ donor.nama_unit }}</h2>
+                    {% if donor.terverifikasi %}
+                    <span class="badge-deadline px-3 py-1 small">Terverifikasi</span>
+                    {% endif %}
+                    <div class="mt-3">
+                        <a class="btn btn-mbg-outline-green btn-sm" href="{% url 'profil:detail_donor' donor.pk %}">Lihat detail</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-0">Belum ada donor terdaftar untuk jenis ini.</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

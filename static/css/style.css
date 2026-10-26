@@ -106,3 +106,24 @@ body {
     overflow: hidden;
     white-space: nowrap;
 }
+
+/* HTMX: indikator "Memuat…" dan redup sementara pada panel hasil */
+.htmx-indicator {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    opacity: 1;
+}
+
+#daftar-donor-panel.htmx-request {
+    opacity: 0.55;
+    transition: opacity 150ms ease-in;
+}
+
+/* Chip yang dipakai sebagai filter (bukan hanya label status) */
+a.chip {
+    cursor: pointer;
+}

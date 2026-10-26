@@ -5,7 +5,6 @@ from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
@@ -21,6 +20,8 @@ from .forms import DonasiForm
 from .models import Donasi
 from .permissions import is_donor
 
+from profil.models import JenisDonor, ProfilDonor
+
 
 class DonasiTests(TestCase):
     @classmethod
@@ -29,9 +30,11 @@ class DonasiTests(TestCase):
         cls.owner = users.objects.create_user("donor", password="test-only-Password789")
         cls.other = users.objects.create_user("other", password="test-only-Password789")
         cls.recipient = users.objects.create_user("recipient", password="test-only-Password789")
-        group = Group.objects.create(name="Donor")
-        cls.owner.groups.add(group)
-        cls.other.groups.add(group)
+        # Role donor datang dari modul Profil Pengguna (ProfilDonor), bukan grup Django.
+        ProfilDonor.objects.create(user=cls.owner, nama_unit="Donor Uji",
+                                   jenis=JenisDonor.PANITIA, kontak="donor@test")
+        ProfilDonor.objects.create(user=cls.other, nama_unit="Donor Lain",
+                                   jenis=JenisDonor.KANTIN, kontak="other@test")
 
     def setUp(self):
         self.temp_media = TemporaryDirectory()
@@ -320,7 +323,7 @@ class DonasiTests(TestCase):
             self.assertEqual(response.status_code, 401)
             self.assertIn("login_url", response.json())
         self.client.force_login(self.owner)
-        self.owner.groups.clear()
+        self.owner.profil_donor.delete()
         response = self.client.post(reverse("donasi:edit", args=[self.item.pk]), self.payload(), HTTP_ACCEPT="application/json")
         self.assertEqual(response.status_code, 403)
         self.item.refresh_from_db()

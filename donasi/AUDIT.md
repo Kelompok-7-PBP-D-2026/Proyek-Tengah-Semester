@@ -30,7 +30,7 @@ foto dari app donasi tanpa perlu mengubah konfigurasi URL/media bersama.
 | Batas akhir | Donasi aktif harus mempunyai akhir pengambilan di masa depan. |
 | Stok | Donasi baru minimal 1 porsi; edit boleh 0 untuk menandai habis. Nilai negatif, pecahan, teks, dan angka di luar batas ditolak. |
 | Status | Tersedia/Habis dihitung dari stok; Pengambilan selesai dihitung dari waktu akhir. Tidak ada input status manual. |
-| Teks | Nama dan lokasi wajib; spasi kosong ditolak; panjang setiap field dibatasi. |
+| Teks | Nama wajib; lokasi harus dipilih dari Venue; spasi kosong ditolak; panjang field dibatasi. |
 | Foto | Opsional, berupa JPG/PNG valid, dan maksimal 5 MB. |
 | Hak akses | Hanya donor login yang dapat mengelola donasi dan hanya pemilik yang dapat mengedit/menghapus. |
 | Admin | Superuser/admin tidak otomatis dianggap donor; akses donor membutuhkan `ProfilDonor`. |
@@ -41,8 +41,8 @@ foto dari app donasi tanpa perlu mengubah konfigurasi URL/media bersama.
 
 ## Hasil pengecekan
 
-- 18 tes donasi lulus.
-- 39 tes seluruh proyek lulus.
+- 19 tes donasi lulus.
+- 77 tes seluruh proyek lulus.
 - Coverage kode Python inti app donasi: 86% (test, migrasi, dan folder management
   dikecualikan dari perhitungan).
 - `python manage.py check`: bersih.
@@ -78,8 +78,8 @@ Donasi saya, pagination, privasi JSON, navigasi, badge stok, dan informasi porsi
 
 ## Batas cakupan
 
-- Relasi venue serta laporan belum diintegrasikan karena modul-modul tersebut
-  dikerjakan anggota lain.
+- Venue sudah diintegrasikan melalui pilihan lokasi pada form dan tautan peta di
+  detail tanpa mengubah model milik anggota lain. Laporan belum diintegrasikan.
 - Modul klaim sudah terhubung melalui tombol Klaim, route navbar, pembaruan stok,
   dan statistik porsi pada detail donasi.
 - `porsi diklaim` menghitung klaim menunggu dan sudah diambil; `porsi diambil`

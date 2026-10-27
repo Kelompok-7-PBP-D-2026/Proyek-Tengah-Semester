@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from klaim.models import Claim, ClaimStatus
 from profil.models import Fakultas, JenisDonor, ProfilDonor, ProfilPenerima
+from venue.models import UnitVenue, Venue
 
 from .models import Donasi
 
@@ -45,6 +46,18 @@ class DonasiTests(TestCase):
             nim="2600000001",
             fakultas=Fakultas.FASILKOM,
             kontak="penerima@test.com",
+        )
+        self.venue_fasilkom = Venue.objects.create(
+            nama="Fasilkom UI",
+            fakultas=UnitVenue.FASILKOM,
+            latitude="-6.364100",
+            longitude="106.827200",
+        )
+        self.venue_balairung = Venue.objects.create(
+            nama="Balairung UI",
+            fakultas=UnitVenue.KAMPUS,
+            latitude="-6.368200",
+            longitude="106.826600",
         )
         self.start = timezone.now().replace(second=0, microsecond=0) + timedelta(hours=1)
         self.item = self.create_donation()
@@ -182,6 +195,27 @@ class DonasiTests(TestCase):
         )
         self.assertEqual(invalid_time.status_code, 400)
         self.assertIn("waktu_akhir_pengambilan", invalid_time.json()["errors"])
+
+    def test_form_uses_registered_venue(self):
+        self.client.force_login(self.owner)
+        create_url = reverse("donasi:buat")
+
+        response = self.client.get(create_url)
+        self.assertContains(response, str(self.venue_fasilkom))
+        self.assertContains(response, reverse("venue:daftar"))
+
+        invalid_location = self.client.post(
+            create_url,
+            self.form_data(lokasi="Lokasi tidak terdaftar"),
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(invalid_location.status_code, 400)
+        self.assertIn("lokasi", invalid_location.json()["errors"])
+
+        self.item.lokasi = "fasilkom ui"
+        self.item.save()
+        edit_response = self.client.get(reverse("donasi:edit", args=[self.item.pk]))
+        self.assertEqual(edit_response.context["form"]["lokasi"].value(), "Fasilkom UI")
 
     def test_search_location_and_status_filters(self):
         self.create_donation(
@@ -336,6 +370,7 @@ class DonasiTests(TestCase):
         self.assertIn("porsi diambil", html)
         self.assertIn("porsi tersisa", html)
         self.assertIn(f"<strong>{self.item.jumlah_porsi}</strong>", html)
+        self.assertContains(response, self.venue_fasilkom.get_absolute_url())
 
     def test_detail_uses_claim_data_for_portion_information(self):
         self.create_claim(ClaimStatus.PENDING, 2)

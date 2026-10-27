@@ -30,8 +30,7 @@ class Donasi(models.Model):
     jumlah_porsi = models.PositiveIntegerField(
         "Jumlah porsi", validators=[MinValueValidator(0), MaxValueValidator(MAX_PORSI)]
     )
-    # Sementara berupa teks; nantinya Donasi akan merujuk model Venue
-    # yang terintegrasi OpenStreetMap.
+    # Nama Venue disimpan sebagai teks sesuai kontrak integrasi Venue dan Klaim.
     lokasi = models.CharField("Lokasi pengambilan", max_length=200)
     waktu_tersedia = models.DateTimeField("Tersedia mulai")
     waktu_akhir_pengambilan = models.DateTimeField("Akhir pengambilan")

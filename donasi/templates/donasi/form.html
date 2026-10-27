@@ -17,7 +17,6 @@
       {% include 'donasi/partials/field.html' with field=form.foto wide=True %}
       {% include 'donasi/partials/field.html' with field=form.catatan wide=True %}
     </div>
-    <datalist id="lokasi-options">{% for lokasi in lokasi_list %}<option value="{{ lokasi }}">{% endfor %}</datalist>
     <div class="donation-form-actions"><a class="btn btn-mbg-outline-green" href="{% if item %}{{ item.get_absolute_url }}{% else %}{% url 'donasi:daftar' %}{% endif %}">Batal</a><button type="submit" class="btn btn-mbg-green">Simpan donasi</button></div>
   </form>
   {% if form.errors %}{{ form.errors.get_json_data|json_script:'donation-initial-errors' }}{% endif %}

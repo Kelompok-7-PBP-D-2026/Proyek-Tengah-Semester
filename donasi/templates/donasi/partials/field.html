@@ -6,5 +6,6 @@
     {% if item.foto %}<label class="photo-clear"><input type="checkbox" name="foto-clear" id="foto-clear_id"> Hapus foto saat ini</label>{% endif %}
   {% else %}{{ field }}{% endif %}
   <p class="form-text" id="id_{{ field.name }}_help">{{ field.help_text }}</p>
+  {% if field.name == 'lokasi' %}<a class="small" href="{% url 'venue:daftar' %}">Lihat daftar venue dan peta</a>{% endif %}
   <div class="donation-field-errors" id="id_{{ field.name }}_errors">{% for error in field.errors %}<p>{{ error }}</p>{% endfor %}</div>
 </div>

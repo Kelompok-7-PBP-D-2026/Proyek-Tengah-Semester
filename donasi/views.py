@@ -12,6 +12,7 @@ from django.utils import timezone, translation
 from django.views.decorators.http import require_GET, require_http_methods
 from klaim.models import Claim, ClaimStatus
 from klaim.services import expire_overdue_claims
+from venue.models import Venue
 
 from .forms import DonasiForm
 from .models import Donasi
@@ -173,8 +174,10 @@ def detail(request, pk):
             jumlah_diambil += claim.portions
 
     recipient = is_recipient(request.user)
+    venue = Venue.objects.filter(nama__iexact=item.lokasi).first()
     return render(request, "donasi/detail.html", {
         **layout_context(request), "item": item,
+        "venue": venue,
         "can_edit": is_donor(request.user) and item.donor_id == request.user.pk,
         "can_claim": recipient and item.jumlah_porsi > 0 and not item.pengambilan_selesai,
         "jumlah_diklaim": jumlah_diklaim,
@@ -216,7 +219,6 @@ def save_form(request, item=None):
                 return JsonResponse({"errors": form.errors.get_json_data(), "message": "Periksa kembali isian form."}, status=400)
         return render(request, "donasi/form.html", {
             **layout_context(request), "form": form, "item": item,
-            "lokasi_list": Donasi.objects.order_by("lokasi").values_list("lokasi", flat=True).distinct(),
         }, status=400 if request.method == "POST" else 200)
 
 

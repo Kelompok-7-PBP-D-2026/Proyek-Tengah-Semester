@@ -2,6 +2,7 @@ from zoneinfo import ZoneInfo
 
 from django import forms
 from django.utils import timezone
+from venue.models import Venue
 
 from .models import MAX_PORSI, Donasi
 
@@ -9,6 +10,16 @@ WIB = ZoneInfo("Asia/Jakarta")
 
 
 class DonasiForm(forms.ModelForm):
+    lokasi = forms.ChoiceField(
+        label="Lokasi pengambilan",
+        choices=(),
+        help_text="Pilih titik pengambilan yang sudah terdaftar di modul Venue.",
+        error_messages={
+            "required": "Lokasi pengambilan wajib dipilih.",
+            "invalid_choice": "Pilih lokasi pengambilan yang tersedia.",
+        },
+    )
+
     class Meta:
         model = Donasi
         fields = [
@@ -66,6 +77,21 @@ class DonasiForm(forms.ModelForm):
         self.fields["jumlah_porsi"].widget.attrs["max"] = MAX_PORSI
         # Donasi baru minimal 1 porsi, sedangkan hasil edit boleh 0 jika stok habis.
         self.fields["jumlah_porsi"].widget.attrs["min"] = 0 if self.instance.pk else 1
+        venues = list(Venue.objects.all())
+        venue_choices = [(venue.nama, str(venue)) for venue in venues]
+        # Donasi lama tetap bisa diedit walau nama lokasinya belum ada di modul Venue.
+        if self.instance.pk:
+            venue_cocok = next(
+                (venue for venue in venues if venue.nama.lower() == self.instance.lokasi.lower()),
+                None,
+            )
+            if venue_cocok:
+                self.initial["lokasi"] = venue_cocok.nama
+            else:
+                venue_choices.append(
+                    (self.instance.lokasi, f"{self.instance.lokasi} (lokasi lama)")
+                )
+        self.fields["lokasi"].choices = [("", "Pilih venue")] + venue_choices
         if self.instance.pk:
             self.fields["jumlah_porsi"].help_text = "Isi sisa stok saat ini. Gunakan 0 jika sudah habis."
         # Tampilkan waktu edit dalam WIB tanpa mengubah pengaturan waktu modul lain.

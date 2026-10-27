@@ -1,64 +1,90 @@
-# Audit validasi modul donasi — 24 Oktober 2026
+# Audit modul donasi — 27 Oktober 2026
 
-Audit ini mencakup modul `donasi`. Perubahan audit hanya berada di dalam app ini,
-termasuk migrasi pembatas stok dan migrasi `0003_pickup_end_and_automatic_stock_status`.
-Modul anggota lain tidak diubah.
+Audit ini hanya mengubah file di dalam app `donasi`. Tidak ada template bersama,
+konfigurasi proyek, atau file app anggota lain yang diubah.
 
-## Hasil dan perbaikan
+## Kesesuaian dengan materi
 
-| Bagian | Aturan / hasil audit |
+Implementasi utama memakai konsep yang ada di Tutorial 0–6:
+
+- Django model, URL, view, template, `ModelForm`, dan CRUD;
+- autentikasi, pemeriksaan role, kepemilikan data, dan CSRF;
+- `JsonResponse`, `fetch`, `async/await`, `FormData`, toast, dan `AbortController`;
+- partial template untuk memperbarui hasil filter tanpa reload halaman penuh;
+- `TestCase`, test client, `reverse`, dan assertion Django.
+
+Bagian yang sebelumnya terlalu kompleks sudah disederhanakan: test migrasi,
+mocking waktu, test exception database, pemulihan sesi lintas tab, penanganan
+banyak jenis status HTTP, history Back/Forward, custom decorator berbasis
+`functools.wraps`, dan management command tambahan.
+
+`ZoneInfo` tetap dipakai agar waktu donasi konsisten dalam WIB tanpa mengubah
+timezone seluruh proyek. `FileResponse` tetap dipakai untuk menampilkan unggahan
+foto dari app donasi tanpa perlu mengubah konfigurasi URL/media bersama.
+
+## Validasi yang dipertahankan
+
+| Bagian | Aturan |
 | --- | --- |
-| Urutan waktu | Mulai pengambilan harus lebih awal dari akhir pengambilan; nilai yang sama juga ditolak. Dilindungi validasi model dan constraint database. |
-| Batas akhir | Donasi baru/aktif harus memiliki batas akhir di masa depan. Donasi lama yang sudah berakhir hanya boleh ditutup dengan 0 stok dan waktu akhir lama yang tidak diubah. |
-| Waktu WIB | Parsing dan tampilan WIB tetap konsisten di form publik dan Django Admin, meskipun timezone project adalah UTC. |
-| Stok | Donasi baru minimal 1 porsi, edit boleh 0 jika habis. Bilangan negatif, pecahan, teks, dan overflow ditolak. Batas atas 2.147.483.647 menjaga konsistensi dengan PostgreSQL. |
-| Ketersediaan | Tidak ada input atau kolom status manual. Tersedia/Habis mengikuti stok secara otomatis, termasuk jika stok diperbarui langsung oleh modul klaim nanti. |
-| Teks | Nama dan lokasi wajib diisi; spasi kosong ditolak; nama 140, lokasi 200, dan catatan 200 karakter. Spasi di tepi dibersihkan. |
-| Foto | Opsional, JPEG/PNG maksimal 5 MB, file kosong/rusak ditolak. Hapus dan unggah foto bersamaan ditolak. Ekstensi penyimpanan mengikuti format gambar yang didekode, bukan nama unggahan. |
-| Hak akses | Login dan role donor diperiksa di server; pemilik ditentukan dari akun yang login. URL edit/hapus milik donor lain tetap ditolak. |
-| Sesi | JSON 401 untuk sesi AJAX yang berakhir; form tidak dialihkan otomatis dan isian tetap ada. Cookie CSRF baru dibaca saat kirim ulang setelah login di tab lain. |
-| Hapus | GET hanya konfirmasi, POST + CSRF untuk menghapus. Relasi PROTECT menghasilkan 409. |
-| Filter | Hari ini/besok/pekan ini memakai WIB dan irisan periode; batas tengah malam diuji. Donasi sendiri tetap terpisah antar akun. |
-| Pesan error | Toast memuat pesan per kesalahan, tetap ada sampai ditutup, tidak menumpuk setelah submit berulang, serta diikuti penanda dan pesan pada kolom. |
-| Error HTTP | Penanganan JSON maupun HTML untuk 400/401/403/404/405/409/413/429 dan error server; HTML error CSRF tidak lagi dianggap kegagalan parsing JSON biasa. |
-| Gangguan koneksi | Tidak ada retry otomatis untuk mutasi; pengguna diminta memeriksa daftar sebelum mengirim ulang agar tidak menduplikasi data. |
-| HTML pengguna | Template Django melakukan escaping; toast dan pesan field menggunakan textContent, bukan interpolasi HTML pengguna. |
+| Urutan waktu | Akhir pengambilan harus setelah waktu mulai; nilai yang sama ditolak. |
+| Batas akhir | Donasi aktif harus mempunyai akhir pengambilan di masa depan. |
+| Stok | Donasi baru minimal 1 porsi; edit boleh 0 untuk menandai habis. Nilai negatif, pecahan, teks, dan angka di luar batas ditolak. |
+| Status | Tersedia/Habis dihitung dari stok; Pengambilan selesai dihitung dari waktu akhir. Tidak ada input status manual. |
+| Teks | Nama dan lokasi wajib; spasi kosong ditolak; panjang setiap field dibatasi. |
+| Foto | Opsional, berupa JPG/PNG valid, dan maksimal 5 MB. |
+| Hak akses | Hanya donor login yang dapat mengelola donasi dan hanya pemilik yang dapat mengedit/menghapus. |
+| Admin | Superuser/admin tidak otomatis dianggap donor; akses donor membutuhkan `ProfilDonor`. |
+| Klaim kedaluwarsa | Diproses saat daftar/detail donasi dibuka dan porsinya dikembalikan ke stok. |
+| Hapus | GET menampilkan konfirmasi; penghapusan membutuhkan POST dan CSRF. |
+| Pesan error | Kesalahan `ModelForm` dikirim sebagai JSON dan ditampilkan lewat toast. |
+| Keamanan tampilan | Template Django melakukan escaping dan JavaScript memasukkan pesan memakai `textContent`. |
 
-Sesuai revisi, field batas waktu bernama `waktu_akhir_pengambilan` dan tidak
-menyatakan kedaluwarsa makanan. Migrasi dari nama lama mempertahankan nilai batas
-waktu dan stok; pengujian mencakup migrasi maju maupun balik.
+## Hasil pengecekan
 
-## Pengecekan
+- 18 tes donasi lulus.
+- 39 tes seluruh proyek lulus.
+- Coverage kode Python inti app donasi: 86% (test, migrasi, dan folder management
+  dikecualikan dari perhitungan).
+- `python manage.py check`: bersih.
+- `python manage.py makemigrations --check --dry-run`: tidak ada perubahan model.
+- `node --check donasi/static/donasi/donasi.js`: sintaks valid.
 
-- Suite pengujian diperbarui untuk form tanpa status, stok awal minimal 1,
-  perhitungan ketersediaan otomatis, dan migrasi yang mempertahankan data.
-- Hasil setelah revisi: 31 test project lulus (29 test donasi, termasuk migrasi),
-  coverage Python modul donasi 99% dengan file test dan migrasi dikecualikan.
-- Django system check dan pengecekan migrasi tidak menemukan masalah.
-- Unit/integration tests Django: jalur valid dan invalid, database constraints,
-  role/kepemilikan/CSRF, filter, foto, admin, dan seed.
-- Coverage dihitung untuk kode Python `donasi`, dengan tests dan migrations dikecualikan.
-- JavaScript diperiksa menggunakan `node --check`.
-- Pengecekan browser menggunakan database dan akun sementara, tidak mengisi atau
-  mengubah data lokal pengguna: toast urutan waktu, beberapa kesalahan sekaligus,
-  simpan berhasil setelah perbaikan, serta logout/login di tab lain dan kirim ulang
-  form tanpa kehilangan isian.
+Acceptance test browser memakai database uji terpisah dan mencakup:
+
+- desktop 1440 px: grid 3 kolom;
+- tablet 768 px: grid 2 kolom;
+- mobile 390 px: grid 1 kolom dan navbar terlipat;
+- tidak ada horizontal overflow pada ketiga ukuran layar;
+- tamu tidak melihat tombol edit dan identitas donor disembunyikan;
+- penerima melihat menu Cari makanan/Klaim saya dan identitas donor setelah login;
+- donor melihat Klaim masuk/Donasi saya, serta tombol edit/hapus hanya pada
+  donasi miliknya sendiri;
+- Donasi saya tetap menampilkan donasi yang telah berakhir;
+- filter pencarian AJAX memperbarui daftar tanpa menghilangkan halaman utama;
+- validasi waktu yang salah menampilkan toast yang sesuai dan mempertahankan
+  nilai form;
+- tidak ditemukan error atau warning JavaScript selama skenario tersebut.
+
+Setelah integrasi klaim, pengujian otomatis tambahan memastikan header bersama
+dipakai, route Klaim masuk/Klaim saya aktif, tombol Klaim hanya tersedia bagi
+penerima pada donasi aktif, form klaim dapat dibuka, dan statistik detail membaca
+status klaim yang benar. Pemeriksaan browser ulang tidak dijalankan karena kontrol
+browser lokal sedang dinonaktifkan; hasil breakpoint di atas berasal dari acceptance
+test sebelum integrasi header bersama.
+
+Tes donasi sekarang berfokus pada perilaku yang mudah dijelaskan: halaman daftar
+dan detail, CRUD HTML/AJAX, role dan kepemilikan, CSRF, validasi stok/waktu, filter,
+Donasi saya, pagination, privasi JSON, navigasi, badge stok, dan informasi porsi.
 
 ## Batas cakupan
 
-- Relasi venue/Public API, profil, klaim, dan laporan masih mengikuti catatan
-  integrasi di README. Stok bersamaan dan penghapusan dengan klaim nyata perlu
-  diuji kembali ketika modul klaim tersedia.
-- Pengujian utama dijalankan dengan SQLite lokal; PostgreSQL deployment belum
-  dijalankan pada audit ini. Batas porsi sudah ditetapkan secara eksplisit untuk
-  konsistensi tipe integer antar database.
-- Pemulihan CSRF memakai cookie standar project. Jika autentikasi bersama nanti
-  mengaktifkan CSRF cookie HttpOnly atau CSRF_USE_SESSIONS, mekanisme refresh token
-  perlu disesuaikan; penolakan CSRF tetap menampilkan pesan yang dapat ditindaklanjuti.
-- Jaringan/server yang terputus setelah menyimpan dapat membuat hasil tidak pasti.
-  Pencegahan klik ganda di UI tersedia, tetapi idempotency key di server belum dibuat.
-
-## Referensi
-
-- [Validasi form Django 5.2](https://docs.djangoproject.com/en/5.2/ref/forms/validation/)
-- [Toast Bootstrap 5.3](https://getbootstrap.com/docs/5.3/components/toasts/)
+- Relasi venue serta laporan belum diintegrasikan karena modul-modul tersebut
+  dikerjakan anggota lain.
+- Modul klaim sudah terhubung melalui tombol Klaim, route navbar, pembaruan stok,
+  dan statistik porsi pada detail donasi.
+- `porsi diklaim` menghitung klaim menunggu dan sudah diambil; `porsi diambil`
+  hanya menghitung klaim yang selesai. Klaim batal/kedaluwarsa tidak dihitung.
+- Riwayat klaim menyimpan `donation_id` dan snapshot makanan, sehingga riwayatnya
+  tetap dapat dibaca setelah donasi dihapus.
+- Pengujian dilakukan dengan database test Django lokal. Integrasi deployment dan
+  PostgreSQL tetap perlu diperiksa oleh tim setelah semua modul digabung.

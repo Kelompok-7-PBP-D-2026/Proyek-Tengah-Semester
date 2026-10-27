@@ -1,22 +1,21 @@
 from datetime import datetime, time, timedelta
-from functools import wraps
 from zoneinfo import ZoneInfo
 
-from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.views import redirect_to_login
+from django.contrib.auth.views import LoginView, redirect_to_login
 from django.core.paginator import Paginator
-from django.db.models.deletion import ProtectedError
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone, translation
 from django.views.decorators.http import require_GET, require_http_methods
+from klaim.models import Claim, ClaimStatus
+from klaim.services import expire_overdue_claims
 
 from .forms import DonasiForm
 from .models import Donasi
-from .permissions import is_donor
+from .permissions import is_donor, is_recipient
 
 WIB = ZoneInfo("Asia/Jakarta")
 LOGIN_URL = "donasi:login"
@@ -26,27 +25,46 @@ def wants_json(request):
     return "application/json" in request.headers.get("Accept", "")
 
 
-def donor_required(view):
-    @wraps(view)
-    def wrapped(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            login = redirect_to_login(request.get_full_path(), reverse(LOGIN_URL))
-            if wants_json(request):
-                return JsonResponse({"message": "Sesi masuk sudah berakhir. Masuk kembali untuk melanjutkan.", "login_url": login.url}, status=401)
-            return login
-        if not is_donor(request.user):
-            if wants_json(request):
-                return JsonResponse({"message": "Hanya akun donor yang dapat mengelola donasi."}, status=403)
-            return render(request, "donasi/forbidden.html", layout_context(request), status=403)
-        return view(request, *args, **kwargs)
-    return wrapped
+def donor_access_error(request):
+    if not request.user.is_authenticated:
+        if wants_json(request):
+            return JsonResponse(
+                {"message": "Silakan masuk untuk mengelola donasi."},
+                status=401,
+            )
+        return redirect_to_login(request.get_full_path(), reverse(LOGIN_URL))
+
+    if not is_donor(request.user):
+        if wants_json(request):
+            return JsonResponse(
+                {"message": "Hanya akun donor yang dapat mengelola donasi."},
+                status=403,
+            )
+        return render(
+            request,
+            "donasi/forbidden.html",
+            layout_context(request),
+            status=403,
+        )
+
+    return None
 
 
 def layout_context(request):
-    return {"is_donor": is_donor(request.user), "csrf_cookie_name": settings.CSRF_COOKIE_NAME}
+    donor = is_donor(request.user)
+    return {
+        "is_donor": donor,
+        "is_recipient": is_recipient(request.user),
+    }
+
+
+class DonasiLoginView(LoginView):
+    def get_context_data(self, **kwargs):
+        return {**super().get_context_data(**kwargs), **layout_context(self.request)}
 
 
 def filtered_donations(request):
+    expire_overdue_claims()
     filters = {
         "q": request.GET.get("q", "").strip()[:140],
         "lokasi": request.GET.get("lokasi", "").strip()[:200],
@@ -135,23 +153,42 @@ def api_list(request):
 @translation.override("id")
 def detail(request, pk):
     item = get_object_or_404(Donasi.objects.select_related("donor"), pk=pk)
+    if expire_overdue_claims(donation_id=item.pk):
+        item.refresh_from_db(fields=["jumlah_porsi"])
     if wants_json(request):
         return JsonResponse(serialize_donasi(item, request))
+
+    jumlah_diklaim = 0
+    jumlah_diambil = 0
+    for claim in Claim.objects.filter(donation_id=item.pk):
+        if claim.status in [ClaimStatus.PENDING, ClaimStatus.PICKED_UP]:
+            jumlah_diklaim += claim.portions
+        if claim.status == ClaimStatus.PICKED_UP:
+            jumlah_diambil += claim.portions
+
+    recipient = is_recipient(request.user)
     return render(request, "donasi/detail.html", {
         **layout_context(request), "item": item,
         "can_edit": is_donor(request.user) and item.donor_id == request.user.pk,
+        "can_claim": recipient and item.jumlah_porsi > 0 and not item.pengambilan_selesai,
+        "jumlah_diklaim": jumlah_diklaim,
+        "jumlah_diambil": jumlah_diambil,
     })
 
 
-@donor_required
 @require_http_methods(["GET", "POST"])
 def buat(request):
+    error = donor_access_error(request)
+    if error is not None:
+        return error
     return save_form(request)
 
 
-@donor_required
 @require_http_methods(["GET", "POST"])
 def edit(request, pk):
+    error = donor_access_error(request)
+    if error is not None:
+        return error
     item = get_object_or_404(Donasi, pk=pk, donor=request.user)
     return save_form(request, item)
 
@@ -176,18 +213,14 @@ def save_form(request, item=None):
         }, status=400 if request.method == "POST" else 200)
 
 
-@donor_required
 @require_http_methods(["GET", "POST"])
 def hapus(request, pk):
+    error = donor_access_error(request)
+    if error is not None:
+        return error
     item = get_object_or_404(Donasi, pk=pk, donor=request.user)
     if request.method == "POST":
-        try:
-            item.delete()
-        except ProtectedError:
-            message = "Donasi masih memiliki data terkait dan belum dapat dihapus."
-            if wants_json(request):
-                return JsonResponse({"message": message}, status=409)
-            return render(request, "donasi/hapus.html", {**layout_context(request), "item": item, "error": message}, status=409)
+        item.delete()
         messages.success(request, "Donasi berhasil dihapus.")
         if wants_json(request):
             return JsonResponse({"message": "Donasi berhasil dihapus.", "url": reverse("donasi:daftar")})

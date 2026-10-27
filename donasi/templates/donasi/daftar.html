@@ -16,7 +16,7 @@
   <div class="donation-tabs" aria-label="Filter status">
     <button type="button" data-filter-status="" class="donation-tab {% if not filters.status and not filters.mine %}active{% endif %}" aria-pressed="{% if not filters.status and not filters.mine %}true{% else %}false{% endif %}">Semua</button>
     <button type="button" data-filter-status="tersedia" class="donation-tab {% if filters.status == 'tersedia' %}active{% endif %}" aria-pressed="{% if filters.status == 'tersedia' %}true{% else %}false{% endif %}">Tersedia</button>
-    {% if user.is_authenticated %}<button type="button" data-filter-mine="1" class="donation-tab {% if filters.mine %}active{% endif %}" aria-pressed="{% if filters.mine %}true{% else %}false{% endif %}">Donasi saya</button>{% endif %}
+    {% if is_donor %}<button type="button" data-filter-mine="1" class="donation-tab {% if filters.mine %}active{% endif %}" aria-pressed="{% if filters.mine %}true{% else %}false{% endif %}">Donasi saya</button>{% endif %}
   </div>
   <p id="filter-feedback" class="visually-hidden" role="status" aria-live="polite"></p>
   <div id="donation-results" aria-live="polite">{% include 'donasi/partials/results.html' %}</div>

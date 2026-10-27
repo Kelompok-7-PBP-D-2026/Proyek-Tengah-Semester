@@ -2,13 +2,20 @@
 <div class="donation-grid">
 {% for item in page_obj %}
   <article class="donation-food-card">
-    <a class="donation-card-media tone-{% cycle 'gold' 'kiwi' 'sand' %}" href="{{ item.get_absolute_url }}" aria-label="Lihat {{ item.nama }}">
+    <a class="donation-card-media tone-{% cycle 'gold' 'kiwi' 'sand' %}" href="{{ item.get_absolute_url }}" aria-label="Lihat {{ item.nama }}{% if item.pengambilan_selesai %}, telah berakhir{% elif item.jumlah_porsi == 0 %}, habis{% else %}, tersisa {{ item.jumlah_porsi }} porsi{% endif %}">
       {% if item.foto %}<img class="donation-photo" src="{% url 'donasi:foto' item.pk %}" alt="{{ item.nama }}" loading="lazy">{% else %}<img class="donation-card-illustration" src="{% static 'donasi/images/food-card.svg' %}" width="120" height="102" alt="" loading="lazy">{% endif %}
-      <span class="donation-status status-{{ item.status }} {% if item.pengambilan_selesai %}is-finished{% endif %}"><img src="{% static 'donasi/images/dot.svg' %}" width="7" height="7" alt="">{{ item.status_tampilan }}</span>
+      <span class="donation-status donation-stock {% if item.pengambilan_selesai %}stock-ended{% elif item.jumlah_porsi == 0 %}stock-empty{% elif item.jumlah_porsi <= 5 %}stock-low{% else %}stock-plenty{% endif %}"><span class="donation-stock-dot" aria-hidden="true"></span>{% if item.pengambilan_selesai %}Telah berakhir{% elif item.jumlah_porsi == 0 %}Habis{% else %}{{ item.jumlah_porsi }} porsi{% endif %}</span>
     </a>
-    <div class="donation-card-body"><h2><a href="{{ item.get_absolute_url }}">{{ item.nama }}</a></h2><p>{{ item.jumlah_porsi }} porsi · {{ item.lokasi }}</p>
-      <div class="donation-card-bottom"><span class="donation-deadline">{% if item.pengambilan_selesai %}Pengambilan selesai{% elif item.status == 'habis' %}Stok habis{% else %}Sebelum {{ item.waktu_akhir_pengambilan_wib|date:'d M, H.i' }} WIB{% endif %}</span>
-      {% if is_donor and item.donor_id == user.pk %}<a class="btn btn-mbg-sunshine btn-sm" href="{% url 'donasi:edit' item.pk %}">Edit</a>{% else %}<a class="btn btn-mbg-sunshine btn-sm" href="{{ item.get_absolute_url }}">Detail</a>{% endif %}</div>
+    <div class="donation-card-body"><h2><a href="{{ item.get_absolute_url }}">{{ item.nama }}</a></h2><p>{{ item.lokasi }}</p>
+      <div class="donation-card-bottom">
+        {% if item.pengambilan_selesai %}<p class="donation-card-deadline">Berakhir {{ item.waktu_akhir_pengambilan_wib|date:'d M, H.i' }} WIB</p>
+        {% else %}<p class="donation-card-deadline">Ambil sebelum {{ item.waktu_akhir_pengambilan_wib|date:'d M, H.i' }} WIB</p>{% endif %}
+        <div class="donation-card-actions">
+          {% if is_donor and item.donor_id == user.pk %}<a class="btn btn-mbg-sunshine donation-edit-link" href="{% url 'donasi:edit' item.pk %}" aria-label="Edit donasi {{ item.nama }}" title="Edit donasi">{% include 'donasi/partials/icons/edit.html' %}</a>{% endif %}
+          {% if is_recipient and not item.pengambilan_selesai and item.jumlah_porsi > 0 %}<a class="btn btn-mbg-sunshine donation-claim-link" href="{% url 'klaim:claim_create' item.pk %}">Klaim</a>{% endif %}
+          <a class="btn btn-mbg-green donation-detail-link" href="{{ item.get_absolute_url }}" aria-label="Lihat detail {{ item.nama }}"><span>Lihat detail</span>{% include 'donasi/partials/icons/arrow_right.html' %}</a>
+        </div>
+      </div>
     </div>
   </article>
 {% empty %}

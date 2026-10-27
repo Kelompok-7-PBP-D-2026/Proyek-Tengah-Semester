@@ -12,11 +12,19 @@
         <div class="d-flex flex-wrap gap-2"><span class="donation-status status-{{ item.status }} {% if item.pengambilan_selesai %}is-finished{% endif %}"><img src="{% static 'donasi/images/dot.svg' %}" width="7" height="7" alt="">{{ item.status_tampilan }}</span><span class="donation-deadline">{{ item.waktu_akhir_pengambilan_wib|date:'d M, H.i' }} WIB</span></div>
         <h1 class="font-display">{{ item.nama }}</h1><p class="mb-0">{{ item.catatan|default:'Tidak ada catatan tambahan.'|linebreaksbr }}</p>
       </article>
-      <section class="donation-portions"><h2 class="font-display h5">Stok makanan</h2><div class="donation-panel donation-stat"><strong>{{ item.jumlah_porsi }}</strong><span>porsi tersedia</span></div></section>
+      <section class="donation-portions" aria-labelledby="portion-heading">
+        <h2 id="portion-heading" class="font-display">Informasi porsi</h2>
+        <div class="donation-portion-grid">
+          <div class="donation-panel donation-stat"><strong>{{ jumlah_diklaim }}</strong><span>porsi diklaim</span></div>
+          <div class="donation-panel donation-stat"><strong>{{ jumlah_diambil }}</strong><span>porsi diambil</span></div>
+          <div class="donation-panel donation-stat"><strong>{{ item.jumlah_porsi }}</strong><span>porsi tersisa</span></div>
+        </div>
+      </section>
     </div>
     <aside class="donation-sidebar">
       <section class="donation-panel"><h2 class="eyebrow text-carrot">Rincian</h2><dl class="donation-facts"><dt>Jumlah stok</dt><dd>{{ item.jumlah_porsi }} porsi</dd><dt>Mulai pengambilan</dt><dd>{{ item.waktu_tersedia_wib|date:'d M Y, H.i' }} WIB</dd><dt>Akhir pengambilan</dt><dd>{{ item.waktu_akhir_pengambilan_wib|date:'d M Y, H.i' }} WIB</dd><dt>Lokasi ambil</dt><dd>{{ item.lokasi }}</dd></dl></section>
       <section class="donation-panel"><h2 class="eyebrow text-carrot">Donor</h2>{% if user.is_authenticated %}<div class="d-flex gap-3 align-items-center"><span class="donation-avatar donor-avatar">{{ item.donor.get_username|slice:':2'|upper }}</span><strong>{{ item.donor.get_full_name|default:item.donor.get_username }}</strong></div>{% else %}<p>Masuk untuk melihat informasi donor.</p><a class="btn btn-mbg-outline-green w-100" href="{% url 'login' %}?next={{ request.path|urlencode }}">Masuk</a>{% endif %}</section>
+      {% if can_claim %}<section class="donation-panel"><h2 class="eyebrow text-carrot">Ambil makanan</h2><p class="text-muted">Pilih jumlah porsi dan waktu pengambilan.</p><a class="btn btn-mbg-green w-100" href="{% url 'klaim:claim_create' item.pk %}">Klaim makanan</a></section>{% endif %}
       {% if can_edit %}<section class="donation-panel"><h2 class="eyebrow text-carrot">Aksi donor</h2><div class="d-grid gap-3"><a class="btn btn-mbg-green" href="{% url 'donasi:edit' item.pk %}">Edit donasi</a><a class="btn btn-mbg-outline-green" href="{% url 'donasi:hapus' item.pk %}" data-bs-toggle="modal" data-bs-target="#delete-modal">Hapus donasi</a></div></section>{% endif %}
     </aside>
   </div>

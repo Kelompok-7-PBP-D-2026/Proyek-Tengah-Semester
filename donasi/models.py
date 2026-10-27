@@ -9,11 +9,11 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 
-MAX_PORSI = 2_147_483_647  # Portable PositiveIntegerField limit, including PostgreSQL.
+MAX_PORSI = 2_147_483_647  # Batas aman PositiveIntegerField, termasuk di PostgreSQL.
 
 
 def foto_donasi_path(instance, filename):
-    # Use a generated name rather than trusting a user-supplied path.
+    # Nama acak mencegah bentrok dan tidak memakai nama file dari pengguna secara langsung.
     extension = filename.rsplit(".", 1)[-1].lower()
     return f"donasi/{uuid4().hex}.{extension}"
 
@@ -30,7 +30,8 @@ class Donasi(models.Model):
     jumlah_porsi = models.PositiveIntegerField(
         "Jumlah porsi", validators=[MinValueValidator(0), MaxValueValidator(MAX_PORSI)]
     )
-    # Temporary text field until the venue module supplies its shared model.
+    # Sementara berupa teks; nantinya Donasi akan merujuk model Venue
+    # yang terintegrasi OpenStreetMap.
     lokasi = models.CharField("Lokasi pengambilan", max_length=200)
     waktu_tersedia = models.DateTimeField("Tersedia mulai")
     waktu_akhir_pengambilan = models.DateTimeField("Akhir pengambilan")
@@ -57,6 +58,7 @@ class Donasi(models.Model):
     def clean(self):
         super().clean()
         errors = {}
+        # Rapikan input teks dan tolak nilai yang hanya berisi spasi.
         for field, label in [("nama", "Nama makanan"), ("lokasi", "Lokasi pengambilan")]:
             value = getattr(self, field)
             if isinstance(value, str):
@@ -64,6 +66,7 @@ class Donasi(models.Model):
                 if value and not value.strip():
                     errors[field] = f"{label} wajib diisi."
         if isinstance(self.waktu_tersedia, datetime) and isinstance(self.waktu_akhir_pengambilan, datetime):
+            # Batas akhir harus benar-benar sesudah waktu makanan mulai tersedia.
             if self.waktu_akhir_pengambilan <= self.waktu_tersedia:
                 errors["waktu_akhir_pengambilan"] = "Akhir pengambilan harus setelah waktu mulai pengambilan."
         if errors:

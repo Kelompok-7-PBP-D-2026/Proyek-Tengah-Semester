@@ -22,10 +22,12 @@ LOGIN_URL = "donasi:login"
 
 
 def wants_json(request):
+    """Membedakan request AJAX/JSON dari request halaman biasa."""
     return "application/json" in request.headers.get("Accept", "")
 
 
 def donor_access_error(request):
+    """Mengembalikan respons error jika pengguna bukan donor yang sah."""
     if not request.user.is_authenticated:
         if wants_json(request):
             return JsonResponse(
@@ -64,6 +66,7 @@ class DonasiLoginView(LoginView):
 
 
 def filtered_donations(request):
+    # Klaim kedaluwarsa diproses dulu agar stok yang ditampilkan selalu terbaru.
     expire_overdue_claims()
     filters = {
         "q": request.GET.get("q", "").strip()[:140],
@@ -75,6 +78,7 @@ def filtered_donations(request):
     items = Donasi.objects.select_related("donor")
     now = timezone.now()
     if filters["mine"]:
+        # Tab Donasi Saya hanya menampilkan donasi milik akun yang sedang masuk.
         items = items.filter(donor=request.user)
     else:
         items = items.filter(waktu_akhir_pengambilan__gt=now)
@@ -95,7 +99,7 @@ def filtered_donations(request):
         end_date = today + timedelta(days=7 - today.weekday()) if filters["waktu"] == "pekan_ini" else start_date + timedelta(days=1)
         start = datetime.combine(start_date, time.min, tzinfo=WIB)
         end = datetime.combine(end_date, time.min, tzinfo=WIB)
-        # Include food whose availability overlaps the chosen period.
+        # Tampilkan donasi jika rentang pengambilannya bertumpang tindih dengan filter.
         items = items.filter(waktu_tersedia__lt=end, waktu_akhir_pengambilan__gt=start)
     else:
         filters["waktu"] = ""
@@ -153,6 +157,7 @@ def api_list(request):
 @translation.override("id")
 def detail(request, pk):
     item = get_object_or_404(Donasi.objects.select_related("donor"), pk=pk)
+    # Jika ada klaim kedaluwarsa, kembalikan porsinya sebelum detail ditampilkan.
     if expire_overdue_claims(donation_id=item.pk):
         item.refresh_from_db(fields=["jumlah_porsi"])
     if wants_json(request):
@@ -160,6 +165,7 @@ def detail(request, pk):
 
     jumlah_diklaim = 0
     jumlah_diambil = 0
+    # Pending dan sudah diambil dihitung sebagai pernah diklaim; hanya picked_up yang diambil.
     for claim in Claim.objects.filter(donation_id=item.pk):
         if claim.status in [ClaimStatus.PENDING, ClaimStatus.PICKED_UP]:
             jumlah_diklaim += claim.portions
@@ -194,6 +200,7 @@ def edit(request, pk):
 
 
 def save_form(request, item=None):
+    # Satu fungsi dipakai oleh halaman buat dan edit agar alur validasinya konsisten.
     with timezone.override(WIB), translation.override("id"):
         form = DonasiForm(request.POST if request.method == "POST" else None, request.FILES or None, instance=item)
         if request.method == "POST":

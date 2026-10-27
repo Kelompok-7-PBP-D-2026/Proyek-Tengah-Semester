@@ -1,9 +1,11 @@
 (() => {
+  // Elemen utama untuk filter tanpa memuat ulang seluruh halaman.
   const filterForm = document.querySelector("#donation-filter");
   const results = document.querySelector("#donation-results");
   let filterController;
 
   function getCookie(name) {
+    // Token CSRF dari cookie wajib dikirim pada request POST Django.
     const cookies = document.cookie.split(";");
     for (const cookie of cookies) {
       const [key, value] = cookie.trim().split("=");
@@ -13,6 +15,7 @@
   }
 
   function showToast(messages, type = "error") {
+    // Satu fungsi menangani toast sukses maupun kumpulan pesan validasi.
     const toast = document.querySelector("#donation-toast");
     if (!toast) return;
 
@@ -57,6 +60,7 @@
   }
 
   async function loadResults(url) {
+    // Batalkan request lama jika pengguna mengganti filter dengan cepat.
     if (filterController) filterController.abort();
     filterController = new AbortController();
     results.setAttribute("aria-busy", "true");
@@ -80,6 +84,7 @@
   }
 
   if (filterForm && results) {
+    // Filter dan pagination meminta HTML kartu terbaru melalui JSON.
     filterForm.addEventListener("submit", (event) => {
       event.preventDefault();
       const url = new URL(window.location.href);
@@ -109,8 +114,10 @@
   });
 
   const initialErrors = document.querySelector("#donation-initial-errors");
+  // Error dari submit biasa tetap ditampilkan sebagai toast saat halaman dimuat ulang.
   if (initialErrors) showToast(getErrorMessages(JSON.parse(initialErrors.textContent)));
 
+  // Form buat, edit, dan hapus dikirim melalui AJAX dengan fallback tetap tersedia di Django.
   document.querySelectorAll("[data-donation-form], [data-delete-form]").forEach((form) => {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();

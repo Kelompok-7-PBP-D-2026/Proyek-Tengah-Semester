@@ -64,10 +64,11 @@ class DonasiForm(forms.ModelForm):
             field.widget.attrs["class"] = "form-control"
             field.widget.attrs["aria-describedby"] = f"id_{name}_help id_{name}_errors"
         self.fields["jumlah_porsi"].widget.attrs["max"] = MAX_PORSI
+        # Donasi baru minimal 1 porsi, sedangkan hasil edit boleh 0 jika stok habis.
         self.fields["jumlah_porsi"].widget.attrs["min"] = 0 if self.instance.pk else 1
         if self.instance.pk:
             self.fields["jumlah_porsi"].help_text = "Isi sisa stok saat ini. Gunakan 0 jika sudah habis."
-        # Explicit conversion keeps this module in WIB without changing other apps.
+        # Tampilkan waktu edit dalam WIB tanpa mengubah pengaturan waktu modul lain.
         if self.instance.pk:
             for name in ["waktu_tersedia", "waktu_akhir_pengambilan"]:
                 value = getattr(self.instance, name)
@@ -80,7 +81,7 @@ class DonasiForm(forms.ModelForm):
                 raise forms.ValidationError("Ukuran foto maksimal 5 MB.")
             if foto.image.format not in {"JPEG", "PNG"}:
                 raise forms.ValidationError("Gunakan foto berformat JPG atau PNG.")
-            # Match the stored extension to the decoded image, even if renamed by the uploader.
+            # Samakan ekstensi dengan isi gambar, bukan hanya nama file dari pengguna.
             extension = "jpg" if foto.image.format == "JPEG" else "png"
             foto.name = f"foto.{extension}"
         return foto
@@ -95,6 +96,7 @@ class DonasiForm(forms.ModelForm):
         data = super().clean()
         start = data.get("waktu_tersedia")
         end = data.get("waktu_akhir_pengambilan")
+        # Waktu akhir baru harus di masa depan. Donasi lama tetap boleh ditutup dengan stok 0.
         if end and (not start or end > start) and end <= timezone.now():
             original = self.instance.waktu_akhir_pengambilan if self.instance.pk else None
             unchanged = original and end == original.replace(second=0, microsecond=0)

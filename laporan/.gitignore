@@ -1,0 +1,3 @@
+.local.sqlite3
+.local.sqlite3-*
+__pycache__/

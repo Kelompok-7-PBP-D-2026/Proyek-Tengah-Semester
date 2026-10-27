@@ -1,0 +1,6 @@
+{% extends "laporan/base.html" %}
+{% block laporan_content %}
+<h1>Laporan <span>Dampak</span></h1>{% include "laporan/partials/table.html" with reports=background_reports %}
+<div class="report-delete-backdrop" data-delete-backdrop></div><dialog class="report-delete-dialog" open data-report-delete aria-labelledby="delete-title" aria-describedby="delete-description" data-cancel-url="{{ laporan.get_absolute_url }}">
+<div class="report-danger-icon" aria-hidden="true">!</div><h2 id="delete-title">Hapus laporan ini?</h2><p id="delete-description">{{ laporan.judul }} akan dihapus dari daftar dan tidak bisa dikembalikan.</p><p class="report-delete-note">File PDF yang sudah diunduh tidak ikut terhapus.</p><form method="post">{% csrf_token %}<div class="report-action-group"><a class="report-button outline" href="{{ laporan.get_absolute_url }}" autofocus>Batal</a><button class="report-button destructive" type="submit">Ya, hapus</button></div></form></dialog>
+{% endblock %}{% block footer %}{% endblock %}

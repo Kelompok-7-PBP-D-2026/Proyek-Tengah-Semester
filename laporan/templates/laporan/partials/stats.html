@@ -1,0 +1,6 @@
+{% load laporan_format %}
+<section class="report-stats {% if tinted %}tinted{% endif %}" aria-label="Ringkasan dampak">
+<article class="report-stat {% if dark_first %}dark{% endif %}"><strong>{{ impact.total_porsi|angka_dampak }}</strong><p>{% if annual %}porsi tersalurkan sepanjang {{ year }}{% else %}porsi tersalurkan{% endif %}</p></article>
+<article class="report-stat"><strong>{{ impact.jumlah_donor|angka_dampak }}</strong><p>donor terlibat</p></article>
+<article class="report-stat"><strong>{{ impact.jumlah_penerima|angka_dampak }}</strong><p>penerima terbantu</p></article>
+</section>

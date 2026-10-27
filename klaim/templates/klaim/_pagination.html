@@ -1,0 +1,17 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="claim-pagination" aria-label="Halaman">
+    {% if page_obj.has_previous %}
+    <a class="claim-pagination__item" href="?page={{ page_obj.previous_page_number }}{{ extra_query }}" aria-label="Sebelumnya">&lsaquo;</a>
+    {% endif %}
+    {% for number in page_obj.paginator.page_range %}
+        {% if number == page_obj.number %}
+        <span class="claim-pagination__item claim-pagination__item--active" aria-current="page">{{ number }}</span>
+        {% else %}
+        <a class="claim-pagination__item" href="?page={{ number }}{{ extra_query }}">{{ number }}</a>
+        {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+    <a class="claim-pagination__item" href="?page={{ page_obj.next_page_number }}{{ extra_query }}" aria-label="Berikutnya">&rsaquo;</a>
+    {% endif %}
+</nav>
+{% endif %}

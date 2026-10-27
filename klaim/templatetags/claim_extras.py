@@ -30,13 +30,23 @@ def id_distance(value):
     """Render kilometers as '0,8 km'."""
     return utils.format_distance(value) if value is not None else ""
 
+@register.filter
+def profile_name(user):
+    """Render a user's display name (recipient name, donor unit, or username)."""
+    return integrations.get_user_display_name(user)
+
+
+@register.filter
+def profile_label(user):
+    """Render a recipient as 'Rina Sari (2506 xxxx)'."""
+    return integrations.get_recipient_label(user)
 
 @register.inclusion_tag("klaim/_claim_button.html", takes_context=True)
 def claim_button(context, donation):
     """Render a "Klaim" button for a donation instance.
 
-    Hidden for the donation's own donor. Disabled (with the reason as a tooltip)
-    when the donation cannot be claimed. Anonymous users are sent to login by
+    Hidden for donors and for the donation's own owner. Disabled (reason as a
+    tooltip) when the user cannot claim. Anonymous users are sent to login by
     the claim_create view.
     """
     request = context.get("request")
@@ -45,11 +55,14 @@ def claim_button(context, donation):
 
     if user is None or not user.is_authenticated:
         return {"show": True, "url": url, "blocker": None}
-    if not integrations.is_recipient(user):
+    if integrations.get_donor_profile(user) is not None:
         return {"show": False}
+
+    reason = integrations.recipient_block_reason(user)
+    if reason:
+        return {"show": True, "url": url, "blocker": reason}
 
     info = integrations.donation_info_from_instance(donation)
     if info.owner_id is not None and info.owner_id == user.pk:
         return {"show": False}
-
     return {"show": True, "url": url, "blocker": services.get_claim_blocker(user, info)}

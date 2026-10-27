@@ -38,9 +38,8 @@
                     </thead>
                     <tbody>
                         {% for claim in page_obj %}
-                        {% with recipient_name=claim.recipient.get_full_name|default:claim.recipient.get_username %}
-                        <tr>
-                            <td>{{ recipient_name }}</td>
+                        {% with display_name=claim.recipient|profile_name display_label=claim.recipient|profile_label %}                        <tr>
+                            <td>{{ display_name }}</td>
                             <td>
                                 {{ claim.food_name }}
                                 {% if claim.note %}<span class="claim-table__note">Catatan: {{ claim.note }}</span>{% endif %}

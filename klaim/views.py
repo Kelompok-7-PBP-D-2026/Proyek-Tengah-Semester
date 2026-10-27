@@ -95,8 +95,13 @@ def _filtered_page(request, queryset):
 @login_required
 def claim_create(request, donation_id):
     """Show and process the claim form for one donation."""
-    if not integrations.is_recipient(request.user):
-        raise PermissionDenied
+    reason = integrations.recipient_block_reason(request.user)
+    if reason:
+        messages.error(request, reason)
+        return redirect(
+            integrations.get_profile_url() or integrations.get_donation_list_url() or "/"
+        )
+    
     services.expire_overdue_claims(donation_id=donation_id)
     donation = integrations.get_donation(donation_id)
     if donation is None:
@@ -192,7 +197,9 @@ def claim_cancel(request, pk):
 def incoming_claim_list(request):
     """List claims on the current donor's donations, with summary counts."""
     services.expire_overdue_claims()
-    queryset = Claim.objects.filter(donor=request.user).select_related("recipient")
+    queryset = Claim.objects.filter(donor=request.user).select_related(
+        "recipient", "recipient__profil_penerima"
+    )
     counts = _status_counts(queryset)
     stats = [
         {"value": counts.get(ClaimStatus.PENDING, 0), "label": "klaim menunggu diambil"},

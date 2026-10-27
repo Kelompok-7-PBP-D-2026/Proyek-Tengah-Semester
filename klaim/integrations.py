@@ -1,7 +1,8 @@
-"""Single adapter between the klaim app and the donation module.
+"""Single adapter between the klaim app and the donation and profile modules.
 
-Everything that touches the donation model (owned by another team member)
-lives in this file. Field names below were verified against donasi/models.py.
+Everything that touches the donation model (donasi) or the user profiles (profil),
+both owned by other team members, lives in this file. Field names below were
+verified against donasi/models.py and profil/models.py.
 """
 import logging
 from dataclasses import dataclass
@@ -18,18 +19,21 @@ from .utils import ensure_aware, next_slot_start
 
 logger = logging.getLogger(__name__)
 
+# ---- donation module (donasi) ---------------------------------------------
+
 # "app_label.ModelName" of the donation model.
 DONATION_MODEL = "donasi.Donasi"
 
 # Maps our keys to attribute paths on the donation model.
-# Dotted paths (e.g. "venue.nama") and zero-argument callables/properties work,
-# except "available_portions", which must be a plain model field (it is written to).
-# None means "not available on the donation model".
+# Dotted paths (e.g. "donor.profil_donor.nama_unit") and zero-argument
+# callables/properties work, except "available_portions", which must be a plain
+# model field (it is written to). A path that cannot be resolved is treated as
+# missing, and optional keys then fall back to a default.
 FIELD_MAP = {
     "id": "pk",
     "food_name": "nama",
-    # Donasi has no display-name field; the owner's full name or username is used.
-    "donor_name": None,
+    # Organisation name from the donor's profile; falls back to the owner's name.
+    "donor_name": "donor.profil_donor.nama_unit",
     "pickup_location": "lokasi",
     "pickup_start": "waktu_tersedia",
     "pickup_deadline": "waktu_akhir_pengambilan",
@@ -50,6 +54,20 @@ DONATION_LIST_URL_NAME = "donasi:daftar"
 # Demo mode (DEBUG only, when the donation model is not installed).
 DEMO_DONOR_USERNAME = "demo_donor"
 
+# ---- profile module (profil) ----------------------------------------------
+
+# Reverse OneToOne names defined in profil/models.py.
+DONOR_PROFILE_ATTR = "profil_donor"
+RECIPIENT_PROFILE_ATTR = "profil_penerima"
+PROFILE_URL_NAME = "profil:profil_saya"
+
+# Set to True to require admin verification ("terverifikasi") before acting.
+REQUIRE_VERIFIED_DONOR = False
+REQUIRE_VERIFIED_RECIPIENT = False
+
+# Donors see a masked NIM like "2506 xxxx". Set to None to show the full NIM.
+NIM_VISIBLE_DIGITS = 4
+
 _MISSING = object()
 
 
@@ -68,24 +86,97 @@ class DonationInfo:
     distance_km: object = None
 
 
-def is_recipient(user):
-    """Return True if the user may claim food.
+# ---- roles and display names ------------------------------------------------
 
-    The donation module has no separate recipient role, so any active signed-in
-    user may claim (a donor just cannot claim their own donation).
-    TODO: tighten this once the profil module defines a recipient role.
+def _get_profile(user, attr):
+    """Return a related profile, or None when the user has none.
+
+    A missing reverse OneToOne raises RelatedObjectDoesNotExist, which is an
+    AttributeError, so getattr's default catches it.
     """
-    return bool(user.is_authenticated and user.is_active)
+    if user is None or not getattr(user, "is_authenticated", False):
+        return None
+    return getattr(user, attr, None)
+
+
+def get_donor_profile(user):
+    """Return the user's donor profile or None."""
+    return _get_profile(user, DONOR_PROFILE_ATTR)
+
+
+def get_recipient_profile(user):
+    """Return the user's recipient profile or None."""
+    return _get_profile(user, RECIPIENT_PROFILE_ATTR)
+
+
+def recipient_block_reason(user):
+    """Return an Indonesian reason why `user` may not claim food, or None."""
+    if not (user.is_authenticated and user.is_active):
+        return "Masuk dulu untuk mengklaim makanan."
+    profile = get_recipient_profile(user)
+    if profile is None:
+        if get_donor_profile(user) is not None:
+            return "Akun donor tidak bisa mengklaim makanan. Gunakan akun penerima."
+        return "Lengkapi profil penerima dulu sebelum mengklaim makanan."
+    if REQUIRE_VERIFIED_RECIPIENT and not profile.terverifikasi:
+        return "Akun penerimamu belum diverifikasi admin."
+    return None
+
+
+def is_recipient(user):
+    """Return True if the user may claim food (has a recipient profile)."""
+    return recipient_block_reason(user) is None
 
 
 def is_donor(user):
-    """Return True if the user may manage incoming claims (delegates to donasi)."""
+    """Return True if the user may manage incoming claims.
+
+    Uses the donor profile. Accounts without any profile (e.g. older accounts or
+    superusers managed through the donasi module) fall back to donasi.permissions.
+    """
+    if not (user.is_authenticated and user.is_active):
+        return False
+    if get_recipient_profile(user) is not None:
+        return False  # one role per account
+    profile = get_donor_profile(user)
+    if profile is not None:
+        return profile.terverifikasi or not REQUIRE_VERIFIED_DONOR
     try:
         from donasi.permissions import is_donor as donasi_is_donor
     except ImportError:
-        return bool(user.is_authenticated)
+        return False
     return bool(donasi_is_donor(user))
 
+
+def get_user_display_name(user):
+    """Best human name: recipient full name, donor unit name, full name, or username."""
+    recipient = get_recipient_profile(user)
+    if recipient is not None and recipient.nama_lengkap:
+        return recipient.nama_lengkap
+    donor = get_donor_profile(user)
+    if donor is not None and donor.nama_unit:
+        return donor.nama_unit
+    return user.get_full_name() or user.get_username()
+
+
+def mask_nim(nim):
+    """Mask a NIM for display, e.g. '2506000001' -> '2506 xxxx'."""
+    nim = str(nim).strip()
+    if NIM_VISIBLE_DIGITS is None:
+        return nim
+    return f"{nim[:NIM_VISIBLE_DIGITS]} xxxx"
+
+
+def get_recipient_label(user):
+    """Return 'Name (masked NIM)' for a recipient, or just the name."""
+    name = get_user_display_name(user)
+    profile = get_recipient_profile(user)
+    if profile is None or not profile.nim:
+        return name
+    return f"{name} ({mask_nim(profile.nim)})"
+
+
+# ---- donation access --------------------------------------------------------
 
 def _get_donation_model():
     """Return the donation model class, or None when it is not installed."""
@@ -128,7 +219,7 @@ def _to_donation_info(obj):
     donor_name = values["donor_name"]
     if not donor_name:
         owner = get_user_model().objects.filter(pk=values["owner_id"]).first()
-        donor_name = (owner.get_full_name() or owner.get_username()) if owner else "Donor"
+        donor_name = get_user_display_name(owner) if owner else "Donor"
 
     distance = values["distance_km"]
     return DonationInfo(
@@ -218,6 +309,8 @@ def adjust_portions(donation_id, delta):
     model._default_manager.filter(pk=donation_id).update(**{field: F(field) + delta})
 
 
+# ---- URLs -------------------------------------------------------------------
+
 def _safe_reverse(url_name, *args):
     """Reverse a URL name defensively; return None when unavailable."""
     if not url_name:
@@ -242,3 +335,8 @@ def get_donation_detail_url(donation_id):
 def get_donation_list_url():
     """Return the donation list URL, or None if unavailable."""
     return _safe_reverse(DONATION_LIST_URL_NAME)
+
+
+def get_profile_url():
+    """Return the current user's profile page URL, or None if unavailable."""
+    return _safe_reverse(PROFILE_URL_NAME)

@@ -71,8 +71,8 @@ Parameter daftar: `q`, `lokasi`, `waktu` (`hari_ini`, `besok`, `pekan_ini`),
 
 - **Profil:** sudah dipakai untuk menentukan apakah pengguna adalah donor.
 - **Venue:** sudah terintegrasi melalui pilihan Venue pada form dan tautan peta pada
-  detail. Nama venue tetap disimpan sebagai teks sesuai kontrak `venue.integrations`,
-  sehingga data lama dan snapshot lokasi pada Klaim tidak perlu dimigrasikan.
+  detail. Nama venue tetap disimpan sebagai teks sesuai kontrak `venue.integrations`
+  dan diteruskan ke snapshot lokasi pada Klaim.
 - **Klaim:** sudah terintegrasi. Penerima dapat membuka form klaim dari card atau
   detail donasi. Navbar mengarah ke **Klaim masuk/Klaim saya**, stok diperbarui
   oleh proses klaim, dan statistik detail membaca data klaim yang sebenarnya.
@@ -98,5 +98,3 @@ node --check donasi/static/donasi/donasi.js
 Saat audit terakhir, 19 tes donasi dan 77 tes seluruh proyek lulus. Coverage kode
 Python inti app donasi adalah 86%. Tes sengaja memakai pola dasar `TestCase`,
 `self.client`, `reverse`, dan assertion Django agar mudah dipahami untuk live coding.
-
-Rincian hasil dan batas audit ada di [AUDIT.md](AUDIT.md).

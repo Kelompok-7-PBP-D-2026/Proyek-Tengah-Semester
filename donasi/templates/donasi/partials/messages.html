@@ -1,1 +1,11 @@
-{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}" role="status" data-donation-notice data-notice-type="{{ message.tags|default:'info' }}">{{ message }}</div>{% endfor %}
+{# Mengubah Django messages menjadi pemberitahuan yang dapat diteruskan ke toast. #}
+{% for message in messages %}
+  <div
+    class="alert alert-{{ message.tags|default:'info' }}"
+    role="status"
+    data-donation-notice
+    data-notice-type="{{ message.tags|default:'info' }}"
+  >
+    {{ message }}
+  </div>
+{% endfor %}

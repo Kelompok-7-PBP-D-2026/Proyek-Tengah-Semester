@@ -63,6 +63,7 @@ class DonasiTests(TestCase):
         self.item = self.create_donation()
 
     def create_donation(self, **changes):
+        """Membuat Donasi uji dengan nilai default yang dapat dioverride."""
         data = {
             "donor": self.owner,
             "nama": "Nasi ayam",
@@ -75,6 +76,7 @@ class DonasiTests(TestCase):
         return Donasi.objects.create(**data)
 
     def form_data(self, **changes):
+        """Membuat data POST valid untuk pengujian form Donasi."""
         wib = ZoneInfo("Asia/Jakarta")
         data = {
             "nama": "Roti seminar",
@@ -90,6 +92,7 @@ class DonasiTests(TestCase):
         return data
 
     def create_claim(self, status, portions):
+        """Membuat Klaim uji yang terhubung ke Donasi utama."""
         return Claim.objects.create(
             recipient=self.recipient,
             donor=self.owner,
@@ -196,6 +199,21 @@ class DonasiTests(TestCase):
         self.assertEqual(invalid_time.status_code, 400)
         self.assertIn("waktu_akhir_pengambilan", invalid_time.json()["errors"])
 
+        past_time = self.form_data(
+            waktu_tersedia="2020-01-01T10:00",
+            waktu_akhir_pengambilan="2020-01-01T11:00",
+        )
+        invalid_past_time = self.client.post(
+            create_url,
+            past_time,
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(invalid_past_time.status_code, 400)
+        self.assertIn(
+            "waktu_akhir_pengambilan",
+            invalid_past_time.json()["errors"],
+        )
+
     def test_form_uses_registered_venue(self):
         self.client.force_login(self.owner)
         create_url = reverse("donasi:buat")
@@ -211,11 +229,6 @@ class DonasiTests(TestCase):
         )
         self.assertEqual(invalid_location.status_code, 400)
         self.assertIn("lokasi", invalid_location.json()["errors"])
-
-        self.item.lokasi = "fasilkom ui"
-        self.item.save()
-        edit_response = self.client.get(reverse("donasi:edit", args=[self.item.pk]))
-        self.assertEqual(edit_response.context["form"]["lokasi"].value(), "Fasilkom UI")
 
     def test_search_location_and_status_filters(self):
         self.create_donation(

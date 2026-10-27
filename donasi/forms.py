@@ -10,10 +10,13 @@ WIB = ZoneInfo("Asia/Jakarta")
 
 
 class DonasiForm(forms.ModelForm):
+    """Form bersama untuk membuat dan mengedit Donasi."""
+
+    # Pilihan diambil dari Venue, tetapi yang disimpan tetap nama venue berupa teks.
     lokasi = forms.ChoiceField(
         label="Lokasi pengambilan",
         choices=(),
-        help_text="Pilih titik pengambilan yang sudah terdaftar di modul Venue.",
+        help_text="Pilih titik pengambilan.",
         error_messages={
             "required": "Lokasi pengambilan wajib dipilih.",
             "invalid_choice": "Pilih lokasi pengambilan yang tersedia.",
@@ -33,7 +36,6 @@ class DonasiForm(forms.ModelForm):
         }
         error_messages = {
             "nama": {"required": "Nama makanan wajib diisi.", "max_length": "Nama makanan maksimal 140 karakter."},
-            "lokasi": {"required": "Lokasi pengambilan wajib diisi.", "max_length": "Lokasi pengambilan maksimal 200 karakter."},
             "jumlah_porsi": {
                 "required": "Jumlah stok wajib diisi.",
                 "invalid": "Jumlah stok harus berupa angka bulat.",
@@ -53,7 +55,6 @@ class DonasiForm(forms.ModelForm):
         widgets = {
             "nama": forms.TextInput(attrs={"placeholder": "Contoh: Nasi ayam bakar box"}),
             "jumlah_porsi": forms.NumberInput(attrs={"min": 0, "step": 1}),
-            "lokasi": forms.TextInput(attrs={"placeholder": "Contoh: Lobi Gedung A, Fasilkom UI", "list": "lokasi-options"}),
             "waktu_tersedia": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
             "waktu_akhir_pengambilan": forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"}),
             "foto": forms.ClearableFileInput(attrs={"accept": "image/jpeg,image/png"}),
@@ -62,7 +63,6 @@ class DonasiForm(forms.ModelForm):
         help_texts = {
             "nama": "Wajib, maksimal 140 huruf.",
             "jumlah_porsi": "Isi jumlah porsi yang tersedia, minimal 1 porsi untuk donasi baru.",
-            "lokasi": "Tulis titik pengambilan yang mudah ditemukan.",
             "waktu_tersedia": "Waktu mulai pengambilan (WIB), harus sebelum batas akhir.",
             "waktu_akhir_pengambilan": "Batas terakhir makanan bisa diambil (WIB).",
             "foto": "Opsional, JPG atau PNG, maksimal 5 MB.",
@@ -70,6 +70,7 @@ class DonasiForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Menyiapkan atribut input, pilihan Venue, dan nilai awal saat edit."""
         super().__init__(*args, **kwargs)
         for name, field in self.fields.items():
             field.widget.attrs["class"] = "form-control"
@@ -77,20 +78,8 @@ class DonasiForm(forms.ModelForm):
         self.fields["jumlah_porsi"].widget.attrs["max"] = MAX_PORSI
         # Donasi baru minimal 1 porsi, sedangkan hasil edit boleh 0 jika stok habis.
         self.fields["jumlah_porsi"].widget.attrs["min"] = 0 if self.instance.pk else 1
-        venues = list(Venue.objects.all())
-        venue_choices = [(venue.nama, str(venue)) for venue in venues]
-        # Donasi lama tetap bisa diedit walau nama lokasinya belum ada di modul Venue.
-        if self.instance.pk:
-            venue_cocok = next(
-                (venue for venue in venues if venue.nama.lower() == self.instance.lokasi.lower()),
-                None,
-            )
-            if venue_cocok:
-                self.initial["lokasi"] = venue_cocok.nama
-            else:
-                venue_choices.append(
-                    (self.instance.lokasi, f"{self.instance.lokasi} (lokasi lama)")
-                )
+        # Label menampilkan nama dan fakultas, sedangkan value-nya hanya nama venue.
+        venue_choices = [(venue.nama, str(venue)) for venue in Venue.objects.all()]
         self.fields["lokasi"].choices = [("", "Pilih venue")] + venue_choices
         if self.instance.pk:
             self.fields["jumlah_porsi"].help_text = "Isi sisa stok saat ini. Gunakan 0 jika sudah habis."
@@ -101,6 +90,7 @@ class DonasiForm(forms.ModelForm):
                 self.initial[name] = timezone.localtime(value, WIB).replace(tzinfo=None)
 
     def clean_foto(self):
+        # Django/Pillow membaca isi gambar supaya file yang hanya diganti ekstensinya ditolak.
         foto = self.cleaned_data.get("foto")
         if foto and hasattr(foto, "content_type"):
             if foto.size > 5 * 1024 * 1024:
@@ -113,20 +103,19 @@ class DonasiForm(forms.ModelForm):
         return foto
 
     def clean_jumlah_porsi(self):
+        # Nilai 0 hanya boleh dipakai saat donor mengedit donasi menjadi habis.
         value = self.cleaned_data["jumlah_porsi"]
         if not self.instance.pk and value == 0:
             raise forms.ValidationError("Stok donasi baru harus minimal 1 porsi.")
         return value
 
     def clean(self):
+        # Validasi ini membandingkan beberapa field, jadi ditempatkan di clean() form.
         data = super().clean()
-        start = data.get("waktu_tersedia")
         end = data.get("waktu_akhir_pengambilan")
-        # Waktu akhir baru harus di masa depan. Donasi lama tetap boleh ditutup dengan stok 0.
-        if end and (not start or end > start) and end <= timezone.now():
-            original = self.instance.waktu_akhir_pengambilan if self.instance.pk else None
-            unchanged = original and end == original.replace(second=0, microsecond=0)
-            closing = data.get("jumlah_porsi") == 0
-            if not (unchanged and closing):
-                self.add_error("waktu_akhir_pengambilan", "Akhir pengambilan harus di masa depan. Untuk menutup donasi lama, ubah sisa stok menjadi 0 tanpa mengubah waktunya.")
+        if end and end <= timezone.now():
+            self.add_error(
+                "waktu_akhir_pengambilan",
+                "Akhir pengambilan harus di masa depan.",
+            )
         return data

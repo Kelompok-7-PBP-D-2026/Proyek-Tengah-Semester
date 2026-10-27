@@ -1,2 +1,26 @@
 {% extends 'donasi/base.html' %}
-{% block content %}<section class="donation-shell donation-content"><div class="donation-panel donation-delete-card donation-delete-standalone"><div class="donation-delete-icon" aria-hidden="true">!</div><h1 class="font-display h2">Hapus donasi ini?</h1><p>“{{ item.nama }}” akan hilang dari daftar dan tidak bisa dikembalikan.</p><form method="post" data-delete-form>{% csrf_token %}<p class="donation-form-errors" role="alert" tabindex="-1" {% if error %}data-donation-notice data-notice-type="error"{% endif %}>{{ error }}</p><div class="d-flex justify-content-center gap-3"><a class="btn btn-mbg-outline-green" href="{{ item.get_absolute_url }}">Batal</a><button class="btn donation-danger" type="submit">Ya, hapus</button></div></form></div></section>{% endblock %}
+{# Halaman konfirmasi hapus sebagai cadangan ketika modal hapus tidak digunakan. #}
+
+{% block content %}
+<section class="donation-shell donation-content">
+  <div class="donation-panel donation-delete-card donation-delete-standalone">
+    <div class="donation-delete-icon" aria-hidden="true">!</div>
+    <h1 class="font-display h2">Hapus donasi ini?</h1>
+    <p>“{{ item.nama }}” akan hilang dari daftar dan tidak bisa dikembalikan.</p>
+
+    <form method="post" data-delete-form>
+      {% csrf_token %}
+      <p
+        class="donation-form-errors"
+        role="alert"
+        tabindex="-1"
+        {% if error %}data-donation-notice data-notice-type="error"{% endif %}
+      >{{ error }}</p>
+      <div class="d-flex justify-content-center gap-3">
+        <a class="btn btn-mbg-outline-green" href="{{ item.get_absolute_url }}">Batal</a>
+        <button class="btn donation-danger" type="submit">Ya, hapus</button>
+      </div>
+    </form>
+  </div>
+</section>
+{% endblock %}

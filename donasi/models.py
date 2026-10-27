@@ -13,12 +13,15 @@ MAX_PORSI = 2_147_483_647  # Batas aman PositiveIntegerField, termasuk di Postgr
 
 
 def foto_donasi_path(instance, filename):
+    """Membuat nama file foto yang unik di folder media/donasi."""
     # Nama acak mencegah bentrok dan tidak memakai nama file dari pengguna secara langsung.
     extension = filename.rsplit(".", 1)[-1].lower()
     return f"donasi/{uuid4().hex}.{extension}"
 
 
 class Donasi(models.Model):
+    """Makanan surplus yang ditawarkan donor untuk diambil penerima."""
+
     class Status(models.TextChoices):
         TERSEDIA = "tersedia", "Tersedia"
         HABIS = "habis", "Habis"
@@ -73,22 +76,27 @@ class Donasi(models.Model):
 
     @property
     def pengambilan_selesai(self):
+        """True jika batas akhir pengambilan sudah lewat."""
         return self.waktu_akhir_pengambilan <= timezone.now()
 
     @property
     def status(self):
+        """Status stok dihitung otomatis, bukan diisi melalui form."""
         return self.Status.TERSEDIA if self.jumlah_porsi > 0 else self.Status.HABIS
 
     @property
     def status_tampilan(self):
+        """Status untuk UI; waktu berakhir lebih utama daripada kondisi stok."""
         if self.pengambilan_selesai:
             return "Pengambilan selesai"
         return self.Status(self.status).label
 
     @property
     def waktu_tersedia_wib(self):
+        """Waktu mulai yang sudah dikonversi dari database ke WIB."""
         return timezone.localtime(self.waktu_tersedia, ZoneInfo("Asia/Jakarta"))
 
     @property
     def waktu_akhir_pengambilan_wib(self):
+        """Waktu akhir yang sudah dikonversi dari database ke WIB."""
         return timezone.localtime(self.waktu_akhir_pengambilan, ZoneInfo("Asia/Jakarta"))

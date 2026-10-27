@@ -36,10 +36,12 @@
 
   function baseMap(el, center, zoom) {
     var map = L.map(el, { scrollWheelZoom: false }).setView(center, zoom);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      attribution: 'Tiles &copy; Esri'
     }).addTo(map);
+
+
     return map;
   }
 

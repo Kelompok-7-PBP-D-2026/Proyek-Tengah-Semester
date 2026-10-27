@@ -33,14 +33,16 @@ foto dari app donasi tanpa perlu mengubah konfigurasi URL/media bersama.
 | Teks | Nama dan lokasi wajib; spasi kosong ditolak; panjang setiap field dibatasi. |
 | Foto | Opsional, berupa JPG/PNG valid, dan maksimal 5 MB. |
 | Hak akses | Hanya donor login yang dapat mengelola donasi dan hanya pemilik yang dapat mengedit/menghapus. |
+| Admin | Superuser/admin tidak otomatis dianggap donor; akses donor membutuhkan `ProfilDonor`. |
+| Klaim kedaluwarsa | Diproses saat daftar/detail donasi dibuka dan porsinya dikembalikan ke stok. |
 | Hapus | GET menampilkan konfirmasi; penghapusan membutuhkan POST dan CSRF. |
 | Pesan error | Kesalahan `ModelForm` dikirim sebagai JSON dan ditampilkan lewat toast. |
 | Keamanan tampilan | Template Django melakukan escaping dan JavaScript memasukkan pesan memakai `textContent`. |
 
 ## Hasil pengecekan
 
-- 17 tes donasi lulus.
-- 38 tes seluruh proyek lulus.
+- 18 tes donasi lulus.
+- 39 tes seluruh proyek lulus.
 - Coverage kode Python inti app donasi: 86% (test, migrasi, dan folder management
   dikecualikan dari perhitungan).
 - `python manage.py check`: bersih.

@@ -43,6 +43,9 @@ modul profil; tidak perlu membuat superuser khusus untuk memakai modul donasi.
 - Kesalahan form dikembalikan oleh `ModelForm` dan ditampilkan melalui toast.
 - Pemilik selalu diambil dari `request.user`; donor tidak dapat mengubah pemilik
   melalui isi form atau URL.
+- Klaim yang melewati batas diproses saat daftar/detail donasi dibuka, sehingga
+  porsinya langsung kembali ke stok.
+- Admin tidak otomatis menjadi donor; pengelolaan donasi membutuhkan `ProfilDonor`.
 
 Waktu form dan tampilan donasi memakai WIB secara lokal di app `donasi`, tanpa
 mengubah konfigurasi timezone milik seluruh proyek.
@@ -89,7 +92,7 @@ python -m coverage report -m --omit="donasi/test*.py,donasi/migrations/*,donasi/
 node --check donasi/static/donasi/donasi.js
 ```
 
-Saat audit terakhir, 17 tes donasi dan 38 tes seluruh proyek lulus. Coverage kode
+Saat audit terakhir, 18 tes donasi dan 39 tes seluruh proyek lulus. Coverage kode
 Python inti app donasi adalah 86%. Tes sengaja memakai pola dasar `TestCase`,
 `self.client`, `reverse`, dan assertion Django agar mudah dipahami untuk live coding.
 

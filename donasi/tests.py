@@ -141,6 +141,13 @@ class DonasiTests(TestCase):
         self.client.force_login(self.recipient)
         self.assertEqual(self.client.get(reverse("donasi:buat")).status_code, 403)
 
+        admin = get_user_model().objects.create_superuser(
+            username="admin",
+            password="password123",
+        )
+        self.client.force_login(admin)
+        self.assertEqual(self.client.get(reverse("donasi:buat")).status_code, 403)
+
         self.client.force_login(self.other_donor)
         edit_url = reverse("donasi:edit", args=[self.item.pk])
         delete_url = reverse("donasi:hapus", args=[self.item.pk])
@@ -340,3 +347,17 @@ class DonasiTests(TestCase):
 
         self.assertEqual(response.context["jumlah_diklaim"], 5)
         self.assertEqual(response.context["jumlah_diambil"], 3)
+
+    def test_expired_claim_returns_stock_when_donations_are_opened(self):
+        self.item.jumlah_porsi = 18
+        self.item.save()
+        claim = self.create_claim(ClaimStatus.PENDING, 2)
+        claim.expires_at = timezone.now() - timedelta(minutes=1)
+        claim.save()
+
+        self.client.get(reverse("donasi:daftar"))
+        claim.refresh_from_db()
+        self.item.refresh_from_db()
+
+        self.assertEqual(claim.status, ClaimStatus.EXPIRED)
+        self.assertEqual(self.item.jumlah_porsi, 20)

@@ -9,8 +9,6 @@ def is_donor(user):
     """
     if not (user.is_authenticated and user.is_active):
         return False
-    if user.is_superuser:
-        return True
     return ProfilDonor.objects.filter(user=user).exists()
 
 

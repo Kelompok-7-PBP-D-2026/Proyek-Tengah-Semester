@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils import timezone, translation
 from django.views.decorators.http import require_GET, require_http_methods
 from klaim.models import Claim, ClaimStatus
+from klaim.services import expire_overdue_claims
 
 from .forms import DonasiForm
 from .models import Donasi
@@ -63,6 +64,7 @@ class DonasiLoginView(LoginView):
 
 
 def filtered_donations(request):
+    expire_overdue_claims()
     filters = {
         "q": request.GET.get("q", "").strip()[:140],
         "lokasi": request.GET.get("lokasi", "").strip()[:200],
@@ -151,6 +153,8 @@ def api_list(request):
 @translation.override("id")
 def detail(request, pk):
     item = get_object_or_404(Donasi.objects.select_related("donor"), pk=pk)
+    if expire_overdue_claims(donation_id=item.pk):
+        item.refresh_from_db(fields=["jumlah_porsi"])
     if wants_json(request):
         return JsonResponse(serialize_donasi(item, request))
 

@@ -5,12 +5,7 @@ from django.utils import timezone
 
 from .models import MAX_PORSI, Donasi
 
-
-class WIBDateTimeField(forms.DateTimeField):
-    def to_python(self, value):
-        # Also parse wall-clock inputs correctly outside donation views, e.g. Django Admin.
-        with timezone.override(ZoneInfo("Asia/Jakarta")):
-            return super().to_python(value)
+WIB = ZoneInfo("Asia/Jakarta")
 
 
 class DonasiForm(forms.ModelForm):
@@ -20,7 +15,6 @@ class DonasiForm(forms.ModelForm):
             "nama", "jumlah_porsi", "lokasi", "waktu_tersedia",
             "waktu_akhir_pengambilan", "foto", "catatan",
         ]
-        field_classes = {"waktu_tersedia": WIBDateTimeField, "waktu_akhir_pengambilan": WIBDateTimeField}
         labels = {
             "waktu_tersedia": "Mulai pengambilan",
             "waktu_akhir_pengambilan": "Akhir pengambilan",
@@ -77,7 +71,7 @@ class DonasiForm(forms.ModelForm):
         if self.instance.pk:
             for name in ["waktu_tersedia", "waktu_akhir_pengambilan"]:
                 value = getattr(self.instance, name)
-                self.initial[name] = timezone.localtime(value, ZoneInfo("Asia/Jakarta")).replace(tzinfo=None)
+                self.initial[name] = timezone.localtime(value, WIB).replace(tzinfo=None)
 
     def clean_foto(self):
         foto = self.cleaned_data.get("foto")

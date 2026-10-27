@@ -1,0 +1,40 @@
+{% extends 'venue/base.html' %}
+{% block title %}{% if mode == 'edit' %}Edit venue{% else %}Tambah venue{% endif %} — MBG{% endblock %}
+{% block content %}
+<section class="venue-shell venue-shell--narrow venue-content">
+  <nav class="venue-breadcrumb" aria-label="Breadcrumb"><a href="{% url 'venue:daftar' %}">Venue</a><span aria-hidden="true">›</span><span>{% if mode == 'edit' %}Edit venue{% else %}Tambah venue{% endif %}</span></nav>
+  <h1 class="venue-heading">{% if mode == 'edit' %}EDIT <span>VENUE</span>{% else %}TAMBAH <span>VENUE</span>{% endif %}</h1>
+  <p class="venue-lead">Cari alamat lewat OpenStreetMap, koordinat terisi otomatis.</p>
+
+  <form class="venue-panel venue-form" method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="venue-alert is-error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+
+    <div class="venue-field">
+      <label for="alamat-cari">Cari alamat</label>
+      <input class="form-control" id="alamat-cari" type="search" placeholder="Contoh: Gedung A Fasilkom" autocomplete="off" maxlength="150"
+             data-search-url="{% url 'venue:cari_alamat' %}" aria-describedby="alamat-status">
+      <p class="form-text" id="alamat-status" role="status" aria-live="polite">Ketik nama gedung atau alamat di kampus.</p>
+      <div id="hasil-alamat" class="venue-results" hidden></div>
+    </div>
+    {{ form.alamat }}
+
+    <div class="venue-row">
+      {% include 'venue/_field.html' with field=form.nama help="Nama yang tampil ke penerima." %}
+      {% include 'venue/_field.html' with field=form.fakultas help="Pilih fakultas atau unit." %}
+    </div>
+    <div class="venue-row">
+      {% include 'venue/_field.html' with field=form.latitude help="Terisi dari hasil pencarian." %}
+      {% include 'venue/_field.html' with field=form.longitude help="Terisi dari hasil pencarian." %}
+    </div>
+    {% include 'venue/_field.html' with field=form.deskripsi_akses help="Bantu penerima menemukan titik ambil." %}
+
+    <div id="venue-map" class="venue-map venue-map--form" data-mode="form" role="region" aria-label="Pratinjau lokasi di peta"></div>
+
+    <div class="venue-actions">
+      <a class="btn btn-mbg-outline-green" href="{% if venue %}{{ venue.get_absolute_url }}{% else %}{% url 'venue:daftar' %}{% endif %}">Batal</a>
+      <button class="btn btn-mbg-primary" type="submit">Simpan venue</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

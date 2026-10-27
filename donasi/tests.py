@@ -432,3 +432,44 @@ class DonasiTests(TestCase):
         self.assertEqual(self.item.status_tampilan, "Pengambilan selesai")
         response = self.client.get(reverse("donasi:api_list"), {"mine": "1", "status": "tersedia"})
         self.assertEqual(response.json()["count"], 0)
+
+    def test_navigation_labels_follow_role_and_unresolved_claims_are_disabled(self):
+        for user, expected, excluded in [
+            (self.owner, ["Klaim masuk", "Donasi saya"], ["Cari makanan", "Klaim saya"]),
+            (self.recipient, ["Cari makanan", "Klaim saya"], ["Klaim masuk", "Donasi saya"]),
+        ]:
+            self.client.force_login(user)
+            for url in [reverse("donasi:daftar"), reverse("donasi:login"), self.item.get_absolute_url()]:
+                html = self.client.get(url).content.decode().split("</nav>", 1)[0]
+                for text in expected:
+                    self.assertIn(text, html)
+                for text in excluded:
+                    self.assertNotIn(text, html)
+                self.assertIn('aria-disabled="true"', html)
+                self.assertNotIn('href="#"', html)
+                self.assertLess(html.index(expected[0]), html.index(expected[1]))
+        from .navigation import claims_url
+        with patch.dict("donasi.navigation.CLAIMS_VIEW_NAMES", {"donor": "profil:home", "penerima": "donasi:daftar"}):
+            self.assertEqual(claims_url(donor=True), reverse("profil:home"))
+            self.assertEqual(claims_url(donor=False), reverse("donasi:daftar"))
+            self.client.force_login(self.owner)
+            html = self.client.get(reverse("donasi:daftar")).content.decode().split("</nav>", 1)[0]
+            self.assertNotIn('aria-disabled="true"', html)
+        with patch.dict("donasi.navigation.CLAIMS_VIEW_NAMES", {"donor": "nonexistent_for_test"}):
+            self.assertIsNone(claims_url(donor=True))
+
+    def test_cards_always_offer_details_and_only_owner_gets_edit_icon(self):
+        self.client.force_login(self.owner)
+        self.make_item(donor=self.other, nama="Donasi donor lain")
+        response = self.client.get(reverse("donasi:daftar"), HTTP_ACCEPT="application/json")
+        html = response.json()["html"]
+        self.assertEqual(html.count('class="btn btn-mbg-green donation-detail-link"'), 2)
+        self.assertIn(f'aria-label="Lihat detail {self.item.nama}"', html)
+        self.assertIn(f'aria-label="Edit donasi {self.item.nama}"', html)
+        self.assertIn('title="Edit donasi"', html)
+        self.assertNotIn('aria-label="Edit donasi Donasi donor lain"', html)
+        self.assertEqual(html.count('class="btn btn-mbg-sunshine donation-edit-link"'), 1)
+        self.client.force_login(self.recipient)
+        html = self.client.get(reverse("donasi:daftar"), HTTP_ACCEPT="application/json").json()["html"]
+        self.assertEqual(html.count('class="btn btn-mbg-green donation-detail-link"'), 2)
+        self.assertNotIn('class="btn btn-mbg-sunshine donation-edit-link"', html)

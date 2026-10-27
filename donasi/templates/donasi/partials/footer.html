@@ -2,8 +2,8 @@
 <footer class="donation-footer mt-auto">
   <div class="donation-shell donation-footer-grid">
     <div><a class="donation-brand" href="{% url 'profil:home' %}"><img src="{% static 'donasi/images/logo.png' %}" width="55" height="55" alt="Logo MBG"> MBG</a><p>Makanan Berlebih Gratis</p><p>Proyek Tengah Semester · Kelompok 7 PBP D 2026</p></div>
-    <div><h2>Platform</h2><a href="{% url 'donasi:daftar' %}">Cari makanan</a><a href="{% url 'donasi:buat' %}">Buat donasi</a><a href="{% url 'profil:home' %}#dampak">Dampak bersama</a></div>
-    <div><h2>Akun</h2>{% if user.is_authenticated %}<p>{{ user.get_username }}</p><a href="{% url 'profil:profil_saya' %}">Profil saya</a><a href="{% url 'donasi:daftar' %}?mine=1">Donasi saya</a>{% else %}<a href="{% url 'login' %}">Masuk</a>{% endif %}</div>
+    <div><h2>Platform</h2><a href="{% url 'donasi:daftar' %}">Cari makanan</a>{% if is_donor %}<a href="{% url 'donasi:buat' %}">Buat donasi</a>{% endif %}<a href="{% url 'profil:home' %}#dampak">Dampak bersama</a></div>
+    <div><h2>Akun</h2>{% if user.is_authenticated %}<p>{{ user.get_username }}</p><a href="{% url 'profil:profil_saya' %}">Profil saya</a>{% if is_donor %}<a href="{% url 'donasi:daftar' %}?mine=1">Donasi saya</a>{% elif claims_url %}<a href="{{ claims_url }}">Klaim saya</a>{% endif %}{% else %}<a href="{% url 'login' %}">Masuk</a>{% endif %}</div>
     <div><h2>Tentang MBG</h2><p>Menyalurkan makanan surplus acara kampus kepada mahasiswa.</p></div>
   </div>
 </footer>

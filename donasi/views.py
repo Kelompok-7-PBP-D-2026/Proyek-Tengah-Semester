@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.views import redirect_to_login
+from django.contrib.auth.views import LoginView, redirect_to_login
 from django.core.paginator import Paginator
 from django.db.models.deletion import ProtectedError
 from django.http import FileResponse, Http404, JsonResponse
@@ -16,6 +16,7 @@ from django.views.decorators.http import require_GET, require_http_methods
 
 from .forms import DonasiForm
 from .models import Donasi
+from .navigation import claims_url
 from .permissions import is_donor
 
 WIB = ZoneInfo("Asia/Jakarta")
@@ -43,7 +44,17 @@ def donor_required(view):
 
 
 def layout_context(request):
-    return {"is_donor": is_donor(request.user), "csrf_cookie_name": settings.CSRF_COOKIE_NAME}
+    donor = is_donor(request.user)
+    return {
+        "is_donor": donor,
+        "claims_url": claims_url(donor=donor) if request.user.is_authenticated else None,
+        "csrf_cookie_name": settings.CSRF_COOKIE_NAME,
+    }
+
+
+class DonasiLoginView(LoginView):
+    def get_context_data(self, **kwargs):
+        return {**super().get_context_data(**kwargs), **layout_context(self.request)}
 
 
 def filtered_donations(request):
@@ -140,6 +151,9 @@ def detail(request, pk):
     return render(request, "donasi/detail.html", {
         **layout_context(request), "item": item,
         "can_edit": is_donor(request.user) and item.donor_id == request.user.pk,
+        # Modul klaim belum terintegrasi. Nilai ini menjadi titik sambungnya nanti.
+        "jumlah_diklaim": 0,
+        "jumlah_diambil": 0,
     })
 
 

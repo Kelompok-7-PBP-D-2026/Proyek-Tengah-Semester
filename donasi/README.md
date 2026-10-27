@@ -104,6 +104,17 @@ adalah API internal aplikasi, **bukan pengganti kewajiban Public API eksternal**
 
 ## Integrasi kelompok yang masih perlu disambungkan
 
+Navbar khusus halaman donasi menampilkan **Klaim masuk, Donasi saya** untuk donor
+dan **Cari makanan, Klaim saya** untuk penerima. Menu klaim masih ditandai Segera
+dan tidak dapat diklik selama route modul klaim belum tersedia di checkout.
+Setelah modul tersebut digabung, isi `CLAIMS_VIEW_NAMES` di `donasi/navigation.py`
+dengan nama URL namespaced yang benar untuk masing-masing role. Tidak perlu
+mengubah template bersama atau app klaim untuk menghubungkan menu donasi ini.
+Navbar halaman modul lain tetap dikelola anggota terkait.
+
+Semua kartu menyediakan tombol **Lihat detail**. Pemilik donor mendapat tombol
+ikon pensil tambahan dengan label aksesibel dan title **Edit donasi**.
+
 Model profil, venue, dan klaim belum tersedia saat implementasi modul ini.
 Implementasi sementara sengaja tidak menambahkan model ke app milik anggota lain.
 

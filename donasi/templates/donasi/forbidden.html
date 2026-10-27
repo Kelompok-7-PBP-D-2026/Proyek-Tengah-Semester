@@ -1,2 +1,12 @@
 {% extends 'donasi/base.html' %}
-{% block content %}<section class="donation-shell donation-content"><div class="donation-panel donation-empty"><h1 class="font-display h2">Fitur khusus donor</h1><p>Akunmu belum memiliki akses untuk mengelola donasi makanan.</p><a class="btn btn-mbg-green" href="{% url 'donasi:daftar' %}">Lihat donasi</a></div></section>{% endblock %}
+{# Halaman penolakan akses ketika akun bukan donor yang berhak mengelola Donasi. #}
+
+{% block content %}
+<section class="donation-shell donation-content">
+  <div class="donation-panel donation-empty">
+    <h1 class="font-display h2">Fitur khusus donor</h1>
+    <p>Akunmu belum memiliki akses untuk mengelola donasi makanan.</p>
+    <a class="btn btn-mbg-green" href="{% url 'donasi:daftar' %}">Lihat donasi</a>
+  </div>
+</section>
+{% endblock %}

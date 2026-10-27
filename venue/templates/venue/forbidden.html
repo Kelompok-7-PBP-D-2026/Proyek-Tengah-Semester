@@ -1,0 +1,10 @@
+{% extends 'venue/base.html' %}
+{% block content %}
+<section class="venue-shell venue-content">
+  <div class="venue-panel venue-empty">
+    <h1 class="venue-empty-title">Akses ditolak</h1>
+    <p>Hanya admin dan akun donor yang dapat mengelola venue.</p>
+    <a class="btn btn-mbg-green" href="{% url 'venue:daftar' %}">Kembali ke daftar venue</a>
+  </div>
+</section>
+{% endblock %}

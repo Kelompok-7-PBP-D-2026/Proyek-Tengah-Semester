@@ -7,8 +7,8 @@ app_name = "donasi"
 
 urlpatterns = [
     path("", views.daftar, name="daftar"),
-    # Temporary login reuses Django auth until profil supplies the shared login.
-    path("masuk/", auth_views.LoginView.as_view(template_name="donasi/login.html", next_page=reverse_lazy("donasi:daftar")), name="login"),
+    # Tujuan login saat halaman pengelolaan donasi dibuka oleh pengguna anonim.
+    path("masuk/", views.DonasiLoginView.as_view(template_name="donasi/login.html", next_page=reverse_lazy("donasi:daftar")), name="login"),
     path("keluar/", auth_views.LogoutView.as_view(next_page=reverse_lazy("donasi:daftar")), name="logout"),
     path("api/", views.api_list, name="api_list"),
     path("buat/", views.buat, name="buat"),

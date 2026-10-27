@@ -1,0 +1,87 @@
+{% extends 'venue/base.html' %}
+{% load venue_extras %}
+{% block content %}
+<section class="venue-shell venue-content">
+  {% include 'venue/_messages.html' %}
+  <div class="venue-heading-row">
+    <div>
+      <p class="eyebrow text-carrot">Venue dan lokasi</p>
+      <h1 class="venue-heading">TITIK <span>PENGAMBILAN</span></h1>
+    </div>
+    {% if can_manage %}<a class="btn btn-mbg-primary" href="{% url 'venue:buat' %}">+ Tambah venue</a>{% endif %}
+  </div>
+
+  <div id="venue-layout">
+  {% if venues %}
+    <nav class="venue-chips" aria-label="Filter fakultas">
+      <a class="venue-chip {% if not fakultas_aktif %}active{% endif %}" href="{% url 'venue:daftar' %}{% if q %}?q={{ q|urlencode }}{% endif %}" {% if not fakultas_aktif %}aria-current="true"{% endif %}>Semua ({{ total }})</a>
+      {% for chip in chips %}
+      <a class="venue-chip {% if fakultas_aktif == chip.kode %}active{% endif %}" href="?fakultas={{ chip.kode }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}" {% if fakultas_aktif == chip.kode %}aria-current="true"{% endif %}>{{ chip.singkat }} ({{ chip.n }})</a>
+      {% endfor %}
+    </nav>
+    <div class="venue-grid">
+      <div class="venue-side">
+        <form class="venue-search" method="get" action="{% url 'venue:daftar' %}" role="search">
+          <label for="venue-q">Cari venue</label>
+          <input class="form-control" id="venue-q" name="q" type="search" value="{{ q }}" placeholder="Nama gedung atau fakultas" maxlength="100" autocomplete="off"
+                 hx-get="{% url 'venue:daftar' %}" hx-trigger="input changed delay:300ms, search" hx-include="closest form"
+                 hx-target="#venue-layout" hx-select="#venue-layout" hx-swap="outerHTML" hx-push-url="true">
+          <p class="form-text">Contoh: Fasilkom.</p>
+          {% if fakultas_aktif %}<input type="hidden" name="fakultas" value="{{ fakultas_aktif }}">{% endif %}
+        </form>
+        <div class="venue-list">
+          {% for v in venues %}
+          <article class="venue-card {% if forloop.first %}is-active{% endif %}" data-venue-id="{{ v.pk }}">
+            <div class="venue-card-top">
+              <h2><a href="{{ v.get_absolute_url }}">{{ v.nama }}</a></h2>
+              <span class="venue-badge">{{ v.unit_singkat }}</span>
+            </div>
+            <p class="venue-card-unit">{{ v.get_fakultas_display }}</p>
+            <div class="venue-card-bottom">
+              <span class="venue-distance" data-venue-lat="{{ v.latitude|stringformat:'f' }}" data-venue-lng="{{ v.longitude|stringformat:'f' }}"><strong data-km>{{ v.jarak_teks }} km</strong> <span data-asal>{% if dari_pengguna %}dari lokasimu{% else %}dari pusat kampus{% endif %}</span></span>
+              {% if can_manage %}<a class="btn btn-mbg-outline-green btn-sm" href="{% url 'venue:edit' v.pk %}">Edit</a>{% endif %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="venue-mapcol">
+        {% include 'venue/_mode_switch.html' %}
+        <div id="venue-map" class="venue-map" data-mode="list" role="region" aria-label="Peta titik pengambilan"></div>
+        <p class="venue-note" data-origin-note>{% if dari_pengguna %}Jarak garis lurus dari lokasimu.{% else %}Jarak garis lurus dari pusat kampus. Izinkan lokasi untuk rute dari posisimu.{% endif %}</p>
+      </div>
+    </div>
+    {{ markers|json_script:"venue-data" }}
+  {% else %}
+    <form class="venue-filter venue-panel" method="get" action="{% url 'venue:daftar' %}" role="search">
+      <div>
+        <label for="venue-q">Cari venue</label>
+        <input class="form-control" id="venue-q" name="q" type="search" value="{{ q }}" placeholder="Nama gedung atau fakultas" maxlength="100" autocomplete="off">
+        <p class="form-text">Contoh: Fasilkom.</p>
+      </div>
+      <div>
+        <label for="venue-fakultas">Fakultas</label>
+        <select class="form-select" id="venue-fakultas" name="fakultas">
+          <option value="">Semua fakultas</option>
+          {% for kode, label in unit_choices %}<option value="{{ kode }}" {% if fakultas_aktif == kode %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <p class="form-text">Pilih fakultas atau unit.</p>
+      </div>
+      <button class="btn btn-mbg-green" type="submit">Cari</button>
+    </form>
+    <div class="venue-panel venue-empty">
+      <svg width="172" height="140" viewBox="0 0 172 140" role="img" aria-label="Penanda lokasi kosong" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="86" cy="64" rx="86" ry="64" fill="#FFCA26"/>
+        <path d="M86 18c-17 0-30 13-30 29 0 22 30 52 30 52s30-30 30-52c0-16-13-29-30-29z" fill="#19532B"/>
+        <circle cx="86" cy="47" r="11" fill="#F3E8CC"/>
+        <ellipse cx="86" cy="112" rx="64" ry="14" fill="#19532B"/>
+        <ellipse cx="86" cy="108" rx="48" ry="9" fill="#F3E8CC"/>
+      </svg>
+      <h2 class="venue-empty-title">Venue tidak ditemukan</h2>
+      <p>Coba kata kunci lain{% if can_manage %}, atau tambahkan venue baru lewat pencarian alamat{% endif %}.</p>
+      {% if can_manage %}<a class="btn btn-mbg-primary" href="{% url 'venue:buat' %}">+ Tambah venue</a>{% endif %}
+    </div>
+  {% endif %}
+  </div>
+</section>
+{% endblock %}

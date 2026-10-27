@@ -1,0 +1,4 @@
+-r requirements.txt
+ruff==0.14.3
+djlint==1.36.4
+cssbeautifier==1.15.4

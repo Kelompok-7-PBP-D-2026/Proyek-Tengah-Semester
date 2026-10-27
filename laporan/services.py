@@ -24,7 +24,9 @@ class RingkasanDampak:
     def validate(self):
         for value in (self.total_porsi, self.jumlah_donor, self.jumlah_penerima):
             if type(value) is not int or not 0 <= value <= 9_223_372_036_854_775_807:
-                raise HasilAgregasiTidakValid("Ringkasan harus berisi bilangan bulat nonnegatif.")
+                raise HasilAgregasiTidakValid(
+                    "Ringkasan harus berisi bilangan bulat nonnegatif."
+                )
 
 
 def sumber_terhubung():
@@ -40,7 +42,9 @@ def ringkasan_periode(periode_mulai, periode_selesai):
     provider = import_string(provider_path)
     result = provider(periode_mulai, periode_selesai)
     if not isinstance(result, RingkasanDampak):
-        raise HasilAgregasiTidakValid("Sumber data harus mengembalikan RingkasanDampak.")
+        raise HasilAgregasiTidakValid(
+            "Sumber data harus mengembalikan RingkasanDampak."
+        )
     result.validate()
     return result
 

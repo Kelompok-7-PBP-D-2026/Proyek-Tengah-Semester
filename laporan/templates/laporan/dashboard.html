@@ -1,9 +1,46 @@
 {% extends "laporan/base.html" %}
+
 {% block laporan_content %}
-<div class="report-heading-row"><div class="report-title-stack"><p class="report-eyebrow">Admin</p><h1>Laporan <span>Dampak</span></h1></div><a class="report-button primary" href="{% url 'laporan:buat' %}">+ Buat laporan</a></div>
-{% include "laporan/partials/stats.html" with impact=annual_impact annual=True %}
-{% include "laporan/partials/table.html" with reports=page_obj %}
-{% if not annual_impact %}<p class="report-help report-data-note">Data Klaim belum terhubung atau belum tersedia. Tanda — berarti belum ada angka dampak yang dapat ditampilkan.</p>{% endif %}
-<details class="report-filter-details" {% if request.GET %}open{% endif %}><summary>Cari dan filter laporan <span>{{ stats.total }} laporan tersimpan</span></summary><form class="report-filter" method="get">{% for field in filter_form %}<div class="report-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<button type="submit" class="report-button secondary">Terapkan</button><a href="{% url 'laporan:dashboard' %}" class="report-link">Reset</a></form></details>
-{% if page_obj.has_other_pages %}<nav class="report-pagination" aria-label="Halaman laporan">{% if page_obj.has_previous %}<a href="?{{ filter_query }}&amp;page={{ page_obj.previous_page_number }}">← Sebelumnya</a>{% endif %}<span>Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a href="?{{ filter_query }}&amp;page={{ page_obj.next_page_number }}">Berikutnya →</a>{% endif %}</nav>{% endif %}
+  <div class="report-heading-row">
+    <div class="report-title-stack">
+      <p class="report-eyebrow">Admin</p>
+      <h1>
+        Laporan <span>Dampak</span>
+      </h1>
+    </div>
+    <a class="report-button primary" href="{% url 'laporan:buat' %}">+ Buat laporan</a>
+  </div>
+  {% include "laporan/partials/stats.html" with impact=annual_impact annual=True %}
+  {% include "laporan/partials/table.html" with reports=page_obj %}
+  {% if not annual_impact %}
+    <p class="report-help report-data-note">
+      Data Klaim belum terhubung atau belum tersedia. Tanda — berarti belum ada angka dampak yang dapat ditampilkan.
+    </p>
+  {% endif %}
+  <details class="report-filter-details" {% if request.GET %}open{% endif %}>
+    <summary>
+      Cari dan filter laporan <span>{{ stats.total }} laporan tersimpan</span>
+    </summary>
+    <form class="report-filter" method="get">
+      {% for field in filter_form %}
+        <div class="report-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}{{ field.errors }}
+        </div>
+      {% endfor %}
+      <button type="submit" class="report-button secondary">Terapkan</button>
+      <a href="{% url 'laporan:dashboard' %}" class="report-link">Reset</a>
+    </form>
+  </details>
+  {% if page_obj.has_other_pages %}
+    <nav class="report-pagination" aria-label="Halaman laporan">
+      {% if page_obj.has_previous %}
+        <a href="?{{ filter_query }}&amp;page={{ page_obj.previous_page_number }}">← Sebelumnya</a>
+      {% endif %}
+      <span>Halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a href="?{{ filter_query }}&amp;page={{ page_obj.next_page_number }}">Berikutnya →</a>
+      {% endif %}
+    </nav>
+  {% endif %}
 {% endblock %}

@@ -1,0 +1,19 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = ["migrations"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"local_settings.py" = ["F403", "F405"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["laporan", "pts_project"]
+
+[tool.djlint]
+profile = "django"
+indent = 2
+max_line_length = 100
+blank_line_after_tag = "load,extends"

@@ -1,2 +1,13 @@
 {% extends "laporan/base.html" %}
-{% block laporan_content %}<section class="report-panel report-centered"><h1>Unduhan PDF belum tersedia</h1><p>Layanan PDF belum siap di lingkungan ini. Kamu tetap bisa mengunduh tabel CSV.</p><div class="report-actions"><a class="report-button" href="{% url 'laporan:ekspor_csv' laporan.pk %}">Unduh tabel CSV</a><a class="report-button secondary" href="{{ laporan.get_absolute_url }}">Kembali ke laporan</a></div></section>{% endblock %}
+
+{% block laporan_content %}
+  <section class="report-panel report-centered">
+    <h1>Unduhan PDF belum tersedia</h1>
+    <p>Layanan PDF belum siap di lingkungan ini. Kamu tetap bisa mengunduh tabel CSV.</p>
+    <div class="report-actions">
+      <a class="report-button"
+         href="{% url 'laporan:ekspor_csv' laporan.pk %}">Unduh tabel CSV</a>
+      <a class="report-button secondary" href="{{ laporan.get_absolute_url }}">Kembali ke laporan</a>
+    </div>
+  </section>
+{% endblock %}

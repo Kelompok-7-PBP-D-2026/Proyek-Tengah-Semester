@@ -1,24 +1,96 @@
 {% extends "base.html" %}
+
 {% load static %}
+
 {% block title %}Laporan Dampak · MBG{% endblock %}
 {% block body_class %}laporan-page{% endblock %}
 {% block extra_head %}
-<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Fredoka:wght@500;600&family=Inter:wght@900&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{% static 'laporan/laporan.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Fredoka:wght@500;600&family=Inter:wght@900&family=Poppins:wght@400;700&display=swap"
+        rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'laporan/laporan.css' %}">
 {% endblock %}
 {% block header %}
-<header class="report-header"><div class="report-nav-inner">
-<a href="{% url 'laporan:dashboard' %}" class="report-brand"><img src="{% static 'laporan/images/truck.svg' %}" alt="" width="32" height="24"><span>MBG</span></a>
-<nav aria-label="Navigasi pengelola"><a class="report-nav-active" href="{% url 'laporan:dashboard' %}" aria-current="page">Laporan</a><span class="report-nav-link" aria-disabled="true" title="Modul Venue belum tersedia">Venue</span>
-{% if user.is_authenticated %}<span class="report-role">Admin</span><details class="report-account"><summary aria-label="Menu akun pengelola">AD</summary><div class="report-account-menu"><strong>{{ user.get_username }}</strong><form method="post" action="{% url 'laporan:logout' %}">{% csrf_token %}<button type="submit" class="report-link">Keluar</button></form></div></details>{% else %}<a href="{% url 'laporan:login' %}" class="report-role">Masuk</a>{% endif %}</nav>
-</div></header>{% endblock %}
-{% block content %}<div class="report-shell {% block report_width %}{% endblock %}">
-{% if messages %}<div class="report-messages" aria-live="polite">{% for message in messages %}<p class="report-notice {{ message.tags }}">{{ message }}</p>{% endfor %}</div>{% endif %}
-{% block laporan_content %}{% endblock %}</div>{% endblock %}
-{% block footer %}<footer class="report-footer"><div class="report-footer-inner">
-<div class="report-footer-brand"><div class="report-brand"><img src="{% static 'laporan/images/logo.png' %}" alt="Logo Makanan Berlebih Gratis" width="55" height="55"><span>MBG</span></div><p>Makanan Berlebih Gratis</p><p>Proyek Tengah Semester · Kelompok 7 PBP D 2026</p></div>
-<nav aria-label="Platform"><h2>Platform</h2><a href="{% url 'donasi:daftar' %}">Cari makanan</a><a href="{% url 'donasi:buat' %}">Buat donasi</a><a href="{% url 'laporan:dashboard' %}">Laporan dampak</a></nav>
-<nav aria-label="Akun"><h2>Akun</h2><a href="{% url 'laporan:login' %}">Masuk</a><span aria-disabled="true" title="Pendaftaran belum tersedia">Daftar</span><span aria-disabled="true" title="Verifikasi donor belum tersedia">Verifikasi donor</span></nav>
-<div><h2>Bantuan</h2><span title="Halaman bantuan belum tersedia">Cara kerja</span><span title="Halaman bantuan belum tersedia">Keamanan pangan</span><span title="Informasi kontak belum tersedia">Kontak</span></div>
-</div></footer>{% endblock %}
-{% block extra_scripts %}<script src="{% static 'laporan/laporan.js' %}" defer></script>{% endblock %}
+  <header class="report-header">
+    <div class="report-nav-inner">
+      <a href="{% url 'laporan:dashboard' %}" class="report-brand">
+        <img src="{% static 'laporan/images/truck.svg' %}"
+             alt=""
+             width="32"
+             height="24">
+        <span>MBG</span></a>
+      <nav aria-label="Navigasi pengelola">
+        <a class="report-nav-active"
+           href="{% url 'laporan:dashboard' %}"
+           aria-current="page">Laporan</a>
+        <span class="report-nav-link"
+              aria-disabled="true"
+              title="Modul Venue belum tersedia">Venue</span>
+        {% if user.is_authenticated %}
+          <span class="report-role">Admin</span>
+          <details class="report-account">
+            <summary aria-label="Menu akun pengelola">AD</summary>
+            <div class="report-account-menu">
+              <strong>{{ user.get_username }}</strong>
+              <form method="post" action="{% url 'laporan:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="report-link">Keluar</button>
+              </form>
+            </div>
+          </details>
+        {% else %}
+          <a href="{% url 'laporan:login' %}" class="report-role">Masuk</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+{% endblock %}
+{% block content %}
+  <div class="report-shell {% block report_width %}{% endblock %}">
+    {% if messages %}
+      <div class="report-messages" aria-live="polite">
+        {% for message in messages %}
+          <p class="report-notice {{ message.tags }}">{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block laporan_content %}{% endblock %}
+  </div>
+{% endblock %}
+{% block footer %}
+  <footer class="report-footer">
+    <div class="report-footer-inner">
+      <div class="report-footer-brand">
+        <div class="report-brand">
+          <img src="{% static 'laporan/images/logo.png' %}"
+               alt="Logo Makanan Berlebih Gratis"
+               width="55"
+               height="55">
+          <span>MBG</span>
+        </div>
+        <p>Makanan Berlebih Gratis</p>
+        <p>Proyek Tengah Semester · Kelompok 7 PBP D 2026</p>
+      </div>
+      <nav aria-label="Platform">
+        <h2>Platform</h2>
+        <a href="{% url 'donasi:daftar' %}">Cari makanan</a>
+        <a href="{% url 'donasi:buat' %}">Buat donasi</a>
+        <a href="{% url 'laporan:dashboard' %}">Laporan dampak</a>
+      </nav>
+      <nav aria-label="Akun">
+        <h2>Akun</h2>
+        <a href="{% url 'laporan:login' %}">Masuk</a>
+        <span aria-disabled="true" title="Pendaftaran belum tersedia">Daftar</span>
+        <span aria-disabled="true" title="Verifikasi donor belum tersedia">Verifikasi donor</span>
+      </nav>
+      <div>
+        <h2>Bantuan</h2>
+        <span title="Halaman bantuan belum tersedia">Cara kerja</span>
+        <span title="Halaman bantuan belum tersedia">Keamanan pangan</span>
+        <span title="Informasi kontak belum tersedia">Kontak</span>
+      </div>
+    </div>
+  </footer>
+{% endblock %}
+{% block extra_scripts %}
+  <script src="{% static 'laporan/laporan.js' %}" defer></script>
+{% endblock %}

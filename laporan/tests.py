@@ -1,7 +1,3 @@
-from django.test import TestCase
-
-# Create your tests here.
-
 import csv
 from datetime import date
 from io import StringIO
@@ -10,15 +6,18 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.test import Client, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .exports import buat_csv, buat_pdf, PDFDependencyMissing
+from .exports import PDFDependencyMissing, buat_csv, buat_pdf
 from .forms import LaporanForm
 from .models import Laporan
 from .services import (
-    HasilAgregasiTidakValid, RingkasanDampak, SumberDataBelumTersedia, hitung_laporan,
+    HasilAgregasiTidakValid,
+    RingkasanDampak,
+    SumberDataBelumTersedia,
+    hitung_laporan,
 )
 
 
@@ -39,12 +38,20 @@ class LaporanTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         User = get_user_model()
-        cls.staff = User.objects.create_user(username="pengelola", password="test-pass-785", is_staff=True)
-        cls.other_staff = User.objects.create_user(username="pengelola2", password="test-pass-785", is_staff=True)
-        cls.regular = User.objects.create_user(username="donor", password="test-pass-785")
+        cls.staff = User.objects.create_user(
+            username="pengelola", password="test-pass-785", is_staff=True
+        )
+        cls.other_staff = User.objects.create_user(
+            username="pengelola2", password="test-pass-785", is_staff=True
+        )
+        cls.regular = User.objects.create_user(
+            username="donor", password="test-pass-785"
+        )
         cls.laporan = Laporan.objects.create(
-            judul="Laporan Oktober", periode_mulai=date(2026, 10, 1),
-            periode_selesai=date(2026, 10, 31), dibuat_oleh=cls.staff,
+            judul="Laporan Oktober",
+            periode_mulai=date(2026, 10, 1),
+            periode_selesai=date(2026, 10, 31),
+            dibuat_oleh=cls.staff,
         )
 
     def setUp(self):
@@ -55,8 +62,11 @@ class LaporanTests(TestCase):
 
     def form_data(self, **overrides):
         return {
-            "judul": "Laporan Oktober", "periode_mulai": "2026-10-01",
-            "periode_selesai": "2026-10-31", "catatan": "Catatan kegiatan", **overrides,
+            "judul": "Laporan Oktober",
+            "periode_mulai": "2026-10-01",
+            "periode_selesai": "2026-10-31",
+            "catatan": "Catatan kegiatan",
+            **overrides,
         }
 
     def ready(self):
@@ -79,15 +89,23 @@ class LaporanTests(TestCase):
             self.laporan.full_clean()
 
     def test_same_day_period_is_valid(self):
-        self.assertTrue(LaporanForm(self.form_data(periode_selesai="2026-10-01")).is_valid())
+        self.assertTrue(
+            LaporanForm(self.form_data(periode_selesai="2026-10-01")).is_valid()
+        )
 
     def test_database_rejects_invalid_period(self):
         with self.assertRaises(IntegrityError), transaction.atomic():
-            Laporan.objects.filter(pk=self.laporan.pk).update(periode_selesai=date(2026, 9, 30))
+            Laporan.objects.filter(pk=self.laporan.pk).update(
+                periode_selesai=date(2026, 9, 30)
+            )
 
     def test_database_rejects_fake_ready_or_draft_metrics(self):
         for update in ({"status": "siap"}, {"total_porsi": 0}, {"status": "unknown"}):
-            with self.subTest(update=update), self.assertRaises(IntegrityError), transaction.atomic():
+            with (
+                self.subTest(update=update),
+                self.assertRaises(IntegrityError),
+                transaction.atomic(),
+            ):
                 Laporan.objects.filter(pk=self.laporan.pk).update(**update)
 
     def test_blank_title_uses_period_as_in_figma(self):
@@ -96,9 +114,14 @@ class LaporanTests(TestCase):
         self.assertEqual(form.cleaned_data["judul"], "Laporan Dampak Oktober 2026")
 
     def test_create_cannot_forge_creator_status_or_metrics(self):
-        response = self.client.post(reverse("laporan:buat"), self.form_data(
-            dibuat_oleh=self.regular.pk, status="siap", total_porsi=999,
-        ))
+        response = self.client.post(
+            reverse("laporan:buat"),
+            self.form_data(
+                dibuat_oleh=self.regular.pk,
+                status="siap",
+                total_porsi=999,
+            ),
+        )
         created = Laporan.objects.latest("pk")
         self.assertRedirects(response, created.get_absolute_url())
         self.assertEqual(created.dibuat_oleh, self.staff)
@@ -106,7 +129,9 @@ class LaporanTests(TestCase):
         self.assertIsNone(created.total_porsi)
 
     def test_invalid_creation_does_not_save(self):
-        response = self.client.post(reverse("laporan:buat"), self.form_data(periode_mulai="not-a-date"))
+        response = self.client.post(
+            reverse("laporan:buat"), self.form_data(periode_mulai="not-a-date")
+        )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Laporan.objects.count(), 1)
 
@@ -122,12 +147,24 @@ class LaporanTests(TestCase):
             with self.subTest(query=query):
                 response = self.client.get(reverse("laporan:dashboard"), query)
                 self.assertEqual(response.context["page_obj"].paginator.count, 0)
-        self.assertEqual(self.client.get(reverse("laporan:dashboard"), {"q": "Oktober"}).context["page_obj"].paginator.count, 1)
+        self.assertEqual(
+            self.client.get(reverse("laporan:dashboard"), {"q": "Oktober"})
+            .context["page_obj"]
+            .paginator.count,
+            1,
+        )
 
     def test_pagination_preserves_filter(self):
         for i in range(11):
-            Laporan.objects.create(judul=f"Draf {i}", periode_mulai=date(2026, 1, 1), periode_selesai=date(2026, 1, 1), dibuat_oleh=self.staff)
-        response = self.client.get(reverse("laporan:dashboard"), {"q": "Draf", "page": 2})
+            Laporan.objects.create(
+                judul=f"Draf {i}",
+                periode_mulai=date(2026, 1, 1),
+                periode_selesai=date(2026, 1, 1),
+                dibuat_oleh=self.staff,
+            )
+        response = self.client.get(
+            reverse("laporan:dashboard"), {"q": "Draf", "page": 2}
+        )
         self.assertEqual(len(response.context["page_obj"]), 1)
         self.assertEqual(response.context["filter_query"], "q=Draf")
 
@@ -143,12 +180,22 @@ class LaporanTests(TestCase):
         self.laporan.save()
         response = self.client.get(self.url("detail"))
         self.assertContains(response, "&lt;script&gt;")
-        self.assertNotContains(response, '<img src=x')
+        self.assertNotContains(response, "<img src=x")
 
     def test_all_report_endpoints_require_login(self):
         self.client.logout()
         urls = [reverse("laporan:dashboard"), reverse("laporan:buat")]
-        urls += [self.url(name) for name in ("detail", "edit", "hapus", "generate", "ekspor_csv", "ekspor_pdf")]
+        urls += [
+            self.url(name)
+            for name in (
+                "detail",
+                "edit",
+                "hapus",
+                "generate",
+                "ekspor_csv",
+                "ekspor_pdf",
+            )
+        ]
         for url in urls:
             for method in ("get", "post"):
                 with self.subTest(url=url, method=method):
@@ -159,7 +206,17 @@ class LaporanTests(TestCase):
     def test_regular_user_cannot_read_mutate_or_export_any_report(self):
         self.client.force_login(self.regular)
         urls = [reverse("laporan:dashboard"), reverse("laporan:buat")]
-        urls += [self.url(name) for name in ("detail", "edit", "hapus", "generate", "ekspor_csv", "ekspor_pdf")]
+        urls += [
+            self.url(name)
+            for name in (
+                "detail",
+                "edit",
+                "hapus",
+                "generate",
+                "ekspor_csv",
+                "ekspor_pdf",
+            )
+        ]
         for url in urls:
             for method in ("get", "post"):
                 with self.subTest(url=url, method=method):
@@ -180,33 +237,53 @@ class LaporanTests(TestCase):
 
     def test_login_rejects_regular_and_accepts_staff(self):
         self.client.logout()
-        response = self.client.post(reverse("laporan:login"), {"username": "donor", "password": "test-pass-785"})
+        response = self.client.post(
+            reverse("laporan:login"), {"username": "donor", "password": "test-pass-785"}
+        )
         self.assertContains(response, "tidak memiliki akses")
-        response = self.client.post(reverse("laporan:login"), {"username": "pengelola", "password": "test-pass-785"})
+        response = self.client.post(
+            reverse("laporan:login"),
+            {"username": "pengelola", "password": "test-pass-785"},
+        )
         self.assertRedirects(response, reverse("laporan:dashboard"))
 
     def test_login_rejects_external_next_redirect(self):
         self.client.logout()
-        response = self.client.post(reverse("laporan:login"), {
-            "username": "pengelola", "password": "test-pass-785", "next": "https://untrusted.example/",
-        })
+        response = self.client.post(
+            reverse("laporan:login"),
+            {
+                "username": "pengelola",
+                "password": "test-pass-785",
+                "next": "https://untrusted.example/",
+            },
+        )
         self.assertRedirects(response, reverse("laporan:dashboard"))
 
     def test_logout_requires_post(self):
         self.assertEqual(self.client.get(reverse("laporan:logout")).status_code, 405)
-        self.assertRedirects(self.client.post(reverse("laporan:logout")), reverse("laporan:login"))
+        self.assertRedirects(
+            self.client.post(reverse("laporan:logout")), reverse("laporan:login")
+        )
 
     def test_csrf_is_required_for_mutations(self):
         client = Client(enforce_csrf_checks=True)
         client.force_login(self.staff)
-        for url in [reverse("laporan:buat"), self.url("edit"), self.url("hapus"), self.url("generate"), reverse("laporan:logout")]:
+        for url in [
+            reverse("laporan:buat"),
+            self.url("edit"),
+            self.url("hapus"),
+            self.url("generate"),
+            reverse("laporan:logout"),
+        ]:
             with self.subTest(url=url):
                 self.assertEqual(client.post(url, self.form_data()).status_code, 403)
 
     def test_get_delete_only_confirms_and_post_deletes(self):
         self.assertContains(self.client.get(self.url("hapus")), "Hapus laporan ini?")
         self.assertTrue(Laporan.objects.filter(pk=self.laporan.pk).exists())
-        self.assertRedirects(self.client.post(self.url("hapus")), reverse("laporan:dashboard"))
+        self.assertRedirects(
+            self.client.post(self.url("hapus")), reverse("laporan:dashboard")
+        )
         self.assertFalse(Laporan.objects.filter(pk=self.laporan.pk).exists())
 
     def test_generate_requires_post(self):
@@ -223,11 +300,20 @@ class LaporanTests(TestCase):
 
     @override_settings(LAPORAN_AGGREGATOR="laporan.tests.successful_provider")
     def test_adapter_receives_period_and_saves_snapshot(self):
-        with patch("laporan.tests.successful_provider", return_value=RingkasanDampak(25, 2, 7)) as provider:
+        with patch(
+            "laporan.tests.successful_provider", return_value=RingkasanDampak(25, 2, 7)
+        ) as provider:
             self.client.post(self.url("generate"))
         provider.assert_called_once_with(date(2026, 10, 1), date(2026, 10, 31))
         self.laporan.refresh_from_db()
-        self.assertEqual((self.laporan.total_porsi, self.laporan.jumlah_donor, self.laporan.jumlah_penerima), (25, 2, 7))
+        self.assertEqual(
+            (
+                self.laporan.total_porsi,
+                self.laporan.jumlah_donor,
+                self.laporan.jumlah_penerima,
+            ),
+            (25, 2, 7),
+        )
         self.assertEqual(self.laporan.status, "siap")
         self.assertIsNotNone(self.laporan.dihitung_pada)
 
@@ -241,7 +327,10 @@ class LaporanTests(TestCase):
 
     def test_invalid_adapter_result_does_not_replace_saved_snapshot(self):
         self.ready()
-        with override_settings(LAPORAN_AGGREGATOR="laporan.tests.invalid_provider"), self.assertLogs("laporan.views", level="ERROR"):
+        with (
+            override_settings(LAPORAN_AGGREGATOR="laporan.tests.invalid_provider"),
+            self.assertLogs("laporan.views", level="ERROR"),
+        ):
             response = self.client.post(self.url("generate"), follow=True)
         self.assertContains(response, "Perhitungan belum berhasil")
         self.laporan.refresh_from_db()
@@ -270,7 +359,9 @@ class LaporanTests(TestCase):
     def test_unknown_pk_returns_404(self):
         for name in ("detail", "edit", "hapus", "ekspor_csv", "ekspor_pdf"):
             with self.subTest(name=name):
-                self.assertEqual(self.client.get(self.url(name, pk=999999)).status_code, 404)
+                self.assertEqual(
+                    self.client.get(self.url(name, pk=999999)).status_code, 404
+                )
 
     def test_csv_marks_unknown_and_prevents_formula_injection(self):
         self.laporan.judul = '=HYPERLINK("https://untrusted.example")'
@@ -278,7 +369,9 @@ class LaporanTests(TestCase):
         self.laporan.save()
         response = self.client.get(self.url("ekspor_csv"))
         self.assertEqual(response.status_code, 200)
-        rows = dict(list(csv.reader(StringIO(response.content.decode("utf-8-sig"))))[1:])
+        rows = dict(
+            list(csv.reader(StringIO(response.content.decode("utf-8-sig"))))[1:]
+        )
         self.assertEqual(rows["Total makanan tersalurkan (porsi)"], "Belum tersedia")
         self.assertTrue(rows["Judul"].startswith("'="))
         self.assertTrue(rows["Catatan"].startswith("'  +"))
@@ -286,7 +379,9 @@ class LaporanTests(TestCase):
 
     def test_csv_exports_saved_values(self):
         self.ready()
-        rows = dict(list(csv.reader(StringIO(buat_csv(self.laporan).lstrip("\ufeff"))))[1:])
+        rows = dict(
+            list(csv.reader(StringIO(buat_csv(self.laporan).lstrip("\ufeff"))))[1:]
+        )
         self.assertEqual(rows["Total makanan tersalurkan (porsi)"], "25")
         self.assertEqual(rows["Jumlah donor unik"], "2")
 
@@ -298,7 +393,7 @@ class LaporanTests(TestCase):
         self.assertTrue(response.content.rstrip().endswith(b"%%EOF"))
 
     def test_pdf_handles_long_notes_and_markup_as_text(self):
-        self.laporan.catatan = '<b>Catatan & teks</b> ' * 140
+        self.laporan.catatan = "<b>Catatan & teks</b> " * 140
         self.assertTrue(buat_pdf(self.laporan).startswith(b"%PDF-"))
 
     def test_missing_pdf_dependency_shows_csv_fallback(self):
@@ -310,7 +405,9 @@ class LaporanTests(TestCase):
     @override_settings(LAPORAN_AGGREGATOR="laporan.tests.successful_provider")
     def test_dashboard_annual_counts_come_from_source_not_overlapping_reports(self):
         self.ready()
-        with patch("laporan.views.ringkasan_periode", return_value=RingkasanDampak(90, 3, 12)) as provider:
+        with patch(
+            "laporan.views.ringkasan_periode", return_value=RingkasanDampak(90, 3, 12)
+        ) as provider:
             response = self.client.get(reverse("laporan:dashboard"))
         year = timezone.localdate().year
         provider.assert_called_once_with(date(year, 1, 1), date(year, 12, 31))
@@ -318,21 +415,29 @@ class LaporanTests(TestCase):
 
     @override_settings(LAPORAN_AGGREGATOR="laporan.tests.successful_provider")
     def test_edit_recalculate_uses_new_validated_period(self):
-        with patch("laporan.tests.successful_provider", return_value=RingkasanDampak(15, 2, 4)) as provider:
-            self.client.post(self.url("edit"), self.form_data(periode_selesai="2026-10-15", action="recalculate"))
+        with patch(
+            "laporan.tests.successful_provider", return_value=RingkasanDampak(15, 2, 4)
+        ) as provider:
+            self.client.post(
+                self.url("edit"),
+                self.form_data(periode_selesai="2026-10-15", action="recalculate"),
+            )
         provider.assert_called_once_with(date(2026, 10, 1), date(2026, 10, 15))
         self.laporan.refresh_from_db()
         self.assertEqual(self.laporan.total_porsi, 15)
         self.assertEqual(self.laporan.status, "siap")
 
     def test_crafted_recalculate_without_source_still_saves_honest_draft(self):
-        response = self.client.post(self.url("edit"), self.form_data(action="recalculate"), follow=True)
+        response = self.client.post(
+            self.url("edit"), self.form_data(action="recalculate"), follow=True
+        )
         self.assertContains(response, "Data Klaim belum terhubung")
         self.laporan.refresh_from_db()
         self.assertIsNone(self.laporan.total_porsi)
 
     def test_indonesian_number_format_preserves_unknown_and_zero(self):
         from .templatetags.laporan_format import angka_dampak, periode_laporan
+
         self.assertEqual(angka_dampak(None), "—")
         self.assertEqual(angka_dampak(0), "0")
         self.assertEqual(angka_dampak(1240), "1.240")

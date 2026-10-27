@@ -11,12 +11,16 @@ class AdminLoginForm(AuthenticationForm):
     def confirm_login_allowed(self, user):
         super().confirm_login_allowed(user)
         if not is_admin(user):
-            raise forms.ValidationError("Akun ini tidak memiliki akses pengelola laporan.", code="forbidden")
+            raise forms.ValidationError(
+                "Akun ini tidak memiliki akses pengelola laporan.", code="forbidden"
+            )
 
 
 class LaporanForm(forms.ModelForm):
     judul = forms.CharField(
-        label="Judul laporan", max_length=160, required=False,
+        label="Judul laporan",
+        max_length=160,
+        required=False,
         help_text="Opsional, otomatis memakai nama periode.",
     )
 
@@ -25,7 +29,12 @@ class LaporanForm(forms.ModelForm):
         start, end = data.get("periode_mulai"), data.get("periode_selesai")
         if not data.get("judul") and start and end:
             with translation.override("id"):
-                period = date_format(start, "F Y") if (start.year, start.month) == (end.year, end.month) else f"{date_format(start, 'j M Y')} – {date_format(end, 'j M Y')}"
+                if (start.year, start.month) == (end.year, end.month):
+                    period = date_format(start, "F Y")
+                else:
+                    start_label = date_format(start, "j M Y")
+                    end_label = date_format(end, "j M Y")
+                    period = f"{start_label} – {end_label}"
             data["judul"] = f"Laporan Dampak {period}"
         return data
 
@@ -33,8 +42,10 @@ class LaporanForm(forms.ModelForm):
         model = Laporan
         fields = ["judul", "periode_mulai", "periode_selesai", "catatan"]
         labels = {
-            "judul": "Judul laporan", "periode_mulai": "Periode mulai",
-            "periode_selesai": "Periode selesai", "catatan": "Catatan untuk laporan",
+            "judul": "Judul laporan",
+            "periode_mulai": "Periode mulai",
+            "periode_selesai": "Periode selesai",
+            "catatan": "Catatan untuk laporan",
         }
         help_texts = {
             "periode_mulai": "Tanggal pertama dalam laporan.",
@@ -43,14 +54,17 @@ class LaporanForm(forms.ModelForm):
         }
         widgets = {
             "periode_mulai": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
-            "periode_selesai": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "periode_selesai": forms.DateInput(
+                format="%Y-%m-%d", attrs={"type": "date"}
+            ),
             "catatan": forms.Textarea(attrs={"rows": 1}),
         }
 
 
-class FilterForm(forms.Form):
+class FilterLaporanForm(forms.Form):
     q = forms.CharField(label="Cari judul", max_length=160, required=False)
     status = forms.ChoiceField(
-        label="Status", required=False,
+        label="Status",
+        required=False,
         choices=[("", "Semua status"), *Laporan.Status.choices],
     )

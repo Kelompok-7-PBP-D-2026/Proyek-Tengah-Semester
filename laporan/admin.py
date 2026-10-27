@@ -1,13 +1,17 @@
 from django.contrib import admin
 
-# Register your models here.
-
 from .models import Laporan
 
 
 @admin.register(Laporan)
 class LaporanAdmin(admin.ModelAdmin):
-    list_display = ("judul", "periode_mulai", "periode_selesai", "status", "dibuat_oleh")
+    list_display = (
+        "judul",
+        "periode_mulai",
+        "periode_selesai",
+        "status",
+        "dibuat_oleh",
+    )
     list_filter = ("status",)
     search_fields = ("judul",)
 

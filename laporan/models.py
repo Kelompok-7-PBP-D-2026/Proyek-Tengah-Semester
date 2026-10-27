@@ -1,9 +1,7 @@
-from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.urls import reverse
-
-# Create your models here.
 
 
 class Laporan(models.Model):
@@ -16,7 +14,9 @@ class Laporan(models.Model):
     periode_selesai = models.DateField()
     catatan = models.TextField(blank=True, max_length=3000)
     dibuat_oleh = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="laporan_dampak"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="laporan_dampak",
     )
     status = models.CharField(max_length=8, choices=Status.choices, default=Status.DRAF)
     total_porsi = models.PositiveBigIntegerField(null=True, blank=True)
@@ -36,12 +36,20 @@ class Laporan(models.Model):
             ),
             models.CheckConstraint(
                 condition=(
-                    models.Q(status="draf", total_porsi__isnull=True,
-                             jumlah_donor__isnull=True, jumlah_penerima__isnull=True,
-                             dihitung_pada__isnull=True)
-                    | models.Q(status="siap", total_porsi__isnull=False,
-                               jumlah_donor__isnull=False, jumlah_penerima__isnull=False,
-                               dihitung_pada__isnull=False)
+                    models.Q(
+                        status="draf",
+                        total_porsi__isnull=True,
+                        jumlah_donor__isnull=True,
+                        jumlah_penerima__isnull=True,
+                        dihitung_pada__isnull=True,
+                    )
+                    | models.Q(
+                        status="siap",
+                        total_porsi__isnull=False,
+                        jumlah_donor__isnull=False,
+                        jumlah_penerima__isnull=False,
+                        dihitung_pada__isnull=False,
+                    )
                 ),
                 name="laporan_status_data_consistent",
             ),
@@ -58,8 +66,14 @@ class Laporan(models.Model):
         self.judul = self.judul.strip()
         if not self.judul:
             raise ValidationError({"judul": "Judul laporan wajib diisi."})
-        if self.periode_mulai and self.periode_selesai and self.periode_selesai < self.periode_mulai:
-            raise ValidationError({"periode_selesai": "Tanggal akhir tidak boleh sebelum tanggal mulai."})
+        if (
+            self.periode_mulai
+            and self.periode_selesai
+            and self.periode_selesai < self.periode_mulai
+        ):
+            raise ValidationError(
+                {"periode_selesai": "Tanggal akhir tidak boleh sebelum tanggal mulai."}
+            )
 
     def reset_hasil(self):
         self.status = self.Status.DRAF

@@ -72,9 +72,10 @@ untuk menguji kontrak integrasi; jangan dipasang dalam settings aplikasi nyata.
 
 ## Batas saat ini dan kontrak integrasi Klaim
 
-Belum ada model Klaim nyata di checkout saat implementasi. Karena itu belum
-ada query agregasi produksi: tombol hitung nonaktif secara default dan endpoint
-tetap menolak perhitungan tanpa sumber data. CRUD dan ekspor draf sudah berfungsi.
+Model `klaim.Claim` sudah tersedia setelah pembaruan `main` digabungkan.
+Modul laporan masih menggunakan kontrak provider dan belum memiliki query
+agregasi produksi: tombol hitung nonaktif secara default dan endpoint tetap
+menolak perhitungan tanpa sumber data. CRUD dan ekspor draf sudah berfungsi.
 Jangan menyamakan stok `Donasi.jumlah_porsi` dengan jumlah makanan tersalurkan.
 
 Setelah skema Klaim disepakati, buat provider di dalam modul laporan, misalnya
@@ -93,8 +94,9 @@ yang valid berarti tiga angka nol. Sumber belum tersedia harus melempar
 `SumberDataBelumTersedia`, bukan mengembalikan nol. Provider tidak boleh
 memutasi data klaim/donasi. Angka yang lolos validasi disimpan sebagai snapshot.
 
-Perlu kesepakatan kelompok: nama model/field Klaim, status selesai, timestamp
-serah-terima, relasi penerima/donor, serta pemetaan akun unit kampus ke role admin.
+Model Klaim saat ini menyediakan `status="picked_up"`, `picked_up_at`, `portions`,
+`donor`, dan `recipient`. Integrasi berikutnya perlu memakai field tersebut serta
+menentukan penanganan donor yang sudah dihapus dan rincian per donor.
 Model laporan tidak mengimpor model Klaim sehingga migrasi tidak bergantung padanya.
 Metrik kg, CO2e, dan rincian fakultas belum dibuat tanpa sumber data yang sah.
 
@@ -106,3 +108,36 @@ Setelah integrasi disetujui, tambahkan satu route
 `INSTALLED_APPS`. Terapkan migrasi laporan pada database tujuan dan pasang
 tautan navigasi sesuai kesepakatan desain. Perubahan tersebut tidak dilakukan
 oleh implementasi mandiri ini.
+
+## Standar penulisan kode
+
+Konfigurasi di modul ini membatasi perapihan ke `laporan/`. File migrasi yang
+sudah dibuat tidak diformat ulang. Nama model/field tetap mengikuti domain
+Indonesia, kelas memakai PascalCase, dan fungsi memakai snake_case. Nama view
+menyebut objek laporan secara eksplisit; nama URL publik tetap sama agar tautan
+dan integrasi tidak berubah.
+
+Gunakan indentasi empat spasi untuk Python dan dua spasi untuk HTML/CSS/JS.
+Ruff mengatur format Python pada panjang 88 karakter dan memeriksa import serta
+kesalahan dasar. djLint mengatur format template Django. `.editorconfig`
+menyamakan indentasi dan akhir baris pada editor yang mendukungnya.
+
+Pasang alat pengembangan dari direktori utama proyek:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r laporan\requirements-dev.txt
+.\.venv\Scripts\python.exe -m ruff check laporan
+.\.venv\Scripts\python.exe -m ruff format --check laporan
+.\.venv\Scripts\python.exe -m djlint laporan\templates --configuration laporan\pyproject.toml --check
+```
+
+Untuk merapikan perubahan sebelum commit:
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check laporan --fix
+.\.venv\Scripts\python.exe -m ruff format laporan
+.\.venv\Scripts\python.exe -m djlint laporan\templates --configuration laporan\pyproject.toml --reformat
+```
+
+Tetap jalankan tes setelah perubahan. Lolos formatter tidak membuktikan
+integrasi data Klaim atau deployment sudah selesai.

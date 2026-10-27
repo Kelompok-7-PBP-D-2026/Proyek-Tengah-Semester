@@ -10,11 +10,11 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone, translation
 from django.views.decorators.http import require_GET, require_http_methods
+from klaim.models import Claim, ClaimStatus
 
 from .forms import DonasiForm
 from .models import Donasi
-from .navigation import claims_url
-from .permissions import is_donor
+from .permissions import is_donor, is_recipient
 
 WIB = ZoneInfo("Asia/Jakarta")
 LOGIN_URL = "donasi:login"
@@ -53,7 +53,7 @@ def layout_context(request):
     donor = is_donor(request.user)
     return {
         "is_donor": donor,
-        "claims_url": claims_url(donor=donor) if request.user.is_authenticated else None,
+        "is_recipient": is_recipient(request.user),
     }
 
 
@@ -153,12 +153,22 @@ def detail(request, pk):
     item = get_object_or_404(Donasi.objects.select_related("donor"), pk=pk)
     if wants_json(request):
         return JsonResponse(serialize_donasi(item, request))
+
+    jumlah_diklaim = 0
+    jumlah_diambil = 0
+    for claim in Claim.objects.filter(donation_id=item.pk):
+        if claim.status in [ClaimStatus.PENDING, ClaimStatus.PICKED_UP]:
+            jumlah_diklaim += claim.portions
+        if claim.status == ClaimStatus.PICKED_UP:
+            jumlah_diambil += claim.portions
+
+    recipient = is_recipient(request.user)
     return render(request, "donasi/detail.html", {
         **layout_context(request), "item": item,
         "can_edit": is_donor(request.user) and item.donor_id == request.user.pk,
-        # Modul klaim belum terintegrasi. Nilai ini menjadi titik sambungnya nanti.
-        "jumlah_diklaim": 0,
-        "jumlah_diambil": 0,
+        "can_claim": recipient and item.jumlah_porsi > 0 and not item.pengambilan_selesai,
+        "jumlah_diklaim": jumlah_diklaim,
+        "jumlah_diambil": jumlah_diambil,
     })
 
 

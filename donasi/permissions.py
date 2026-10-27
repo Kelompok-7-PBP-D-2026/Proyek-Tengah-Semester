@@ -1,4 +1,4 @@
-from profil.models import ProfilDonor
+from profil.models import ProfilDonor, ProfilPenerima
 
 
 def is_donor(user):
@@ -12,3 +12,9 @@ def is_donor(user):
     if user.is_superuser:
         return True
     return ProfilDonor.objects.filter(user=user).exists()
+
+
+def is_recipient(user):
+    if not (user.is_authenticated and user.is_active):
+        return False
+    return ProfilPenerima.objects.filter(user=user).exists()

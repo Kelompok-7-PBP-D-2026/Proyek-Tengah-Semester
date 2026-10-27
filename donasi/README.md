@@ -67,14 +67,14 @@ Parameter daftar: `q`, `lokasi`, `waktu` (`hari_ini`, `besok`, `pekan_ini`),
 - **Profil:** sudah dipakai untuk menentukan apakah pengguna adalah donor.
 - **Venue:** `lokasi` masih berupa teks. Integrasi ForeignKey menunggu model venue
   milik anggota terkait tersedia.
-- **Klaim:** statistik diklaim/diambil pada detail masih bernilai 0. Modul klaim
-  nantinya perlu memperbarui stok dan menyediakan route **Klaim masuk/Klaim saya**.
+- **Klaim:** sudah terintegrasi. Penerima dapat membuka form klaim dari card atau
+  detail donasi. Navbar mengarah ke **Klaim masuk/Klaim saya**, stok diperbarui
+  oleh proses klaim, dan statistik detail membaca data klaim yang sebenarnya.
 - **Laporan:** sebaiknya menghitung makanan tersalurkan dari data klaim/serah terima,
   bukan langsung dari stok yang ditulis donor.
 
-Navbar lokal halaman donasi sudah membedakan donor dan penerima. Nama route modul
-klaim nantinya cukup dimasukkan ke `donasi/navigation.py`; tidak perlu mengubah app
-klaim dari modul ini.
+Semua halaman donasi memakai `templates/header.html` dan `templates/footer.html`
+bersama. Integrasi ini tidak mengubah file di app `klaim`.
 
 ## Pengecekan
 
@@ -89,8 +89,8 @@ python -m coverage report -m --omit="donasi/test*.py,donasi/migrations/*,donasi/
 node --check donasi/static/donasi/donasi.js
 ```
 
-Saat audit terakhir, 15 tes donasi dan 36 tes seluruh proyek lulus. Coverage kode
-Python inti app donasi adalah 85%. Tes sengaja memakai pola dasar `TestCase`,
+Saat audit terakhir, 17 tes donasi dan 38 tes seluruh proyek lulus. Coverage kode
+Python inti app donasi adalah 86%. Tes sengaja memakai pola dasar `TestCase`,
 `self.client`, `reverse`, dan assertion Django agar mudah dipahami untuk live coding.
 
 Rincian hasil dan batas audit ada di [AUDIT.md](AUDIT.md).

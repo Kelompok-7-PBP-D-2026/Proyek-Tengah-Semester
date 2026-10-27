@@ -39,9 +39,9 @@ foto dari app donasi tanpa perlu mengubah konfigurasi URL/media bersama.
 
 ## Hasil pengecekan
 
-- 15 tes donasi lulus.
-- 36 tes seluruh proyek lulus.
-- Coverage kode Python inti app donasi: 85% (test, migrasi, dan folder management
+- 17 tes donasi lulus.
+- 38 tes seluruh proyek lulus.
+- Coverage kode Python inti app donasi: 86% (test, migrasi, dan folder management
   dikecualikan dari perhitungan).
 - `python manage.py check`: bersih.
 - `python manage.py makemigrations --check --dry-run`: tidak ada perubahan model.
@@ -63,16 +63,26 @@ Acceptance test browser memakai database uji terpisah dan mencakup:
   nilai form;
 - tidak ditemukan error atau warning JavaScript selama skenario tersebut.
 
+Setelah integrasi klaim, pengujian otomatis tambahan memastikan header bersama
+dipakai, route Klaim masuk/Klaim saya aktif, tombol Klaim hanya tersedia bagi
+penerima pada donasi aktif, form klaim dapat dibuka, dan statistik detail membaca
+status klaim yang benar. Pemeriksaan browser ulang tidak dijalankan karena kontrol
+browser lokal sedang dinonaktifkan; hasil breakpoint di atas berasal dari acceptance
+test sebelum integrasi header bersama.
+
 Tes donasi sekarang berfokus pada perilaku yang mudah dijelaskan: halaman daftar
 dan detail, CRUD HTML/AJAX, role dan kepemilikan, CSRF, validasi stok/waktu, filter,
 Donasi saya, pagination, privasi JSON, navigasi, badge stok, dan informasi porsi.
 
 ## Batas cakupan
 
-- Relasi venue, klaim, serta laporan belum diintegrasikan karena modul-modul
-  tersebut dikerjakan anggota lain.
-- Statistik porsi diklaim dan diambil masih 0 sampai model klaim tersedia.
-- Route **Klaim masuk/Klaim saya** belum dihubungkan sampai nama URL modul klaim
-  tersedia.
+- Relasi venue serta laporan belum diintegrasikan karena modul-modul tersebut
+  dikerjakan anggota lain.
+- Modul klaim sudah terhubung melalui tombol Klaim, route navbar, pembaruan stok,
+  dan statistik porsi pada detail donasi.
+- `porsi diklaim` menghitung klaim menunggu dan sudah diambil; `porsi diambil`
+  hanya menghitung klaim yang selesai. Klaim batal/kedaluwarsa tidak dihitung.
+- Riwayat klaim menyimpan `donation_id` dan snapshot makanan, sehingga riwayatnya
+  tetap dapat dibaca setelah donasi dihapus.
 - Pengujian dilakukan dengan database test Django lokal. Integrasi deployment dan
   PostgreSQL tetap perlu diperiksa oleh tim setelah semua modul digabung.

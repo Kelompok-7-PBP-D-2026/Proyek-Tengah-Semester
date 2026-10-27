@@ -12,6 +12,7 @@
         {% else %}<p class="donation-card-deadline">Ambil sebelum {{ item.waktu_akhir_pengambilan_wib|date:'d M, H.i' }} WIB</p>{% endif %}
         <div class="donation-card-actions">
           {% if is_donor and item.donor_id == user.pk %}<a class="btn btn-mbg-sunshine donation-edit-link" href="{% url 'donasi:edit' item.pk %}" aria-label="Edit donasi {{ item.nama }}" title="Edit donasi">{% include 'donasi/partials/icons/edit.html' %}</a>{% endif %}
+          {% if is_recipient and not item.pengambilan_selesai and item.jumlah_porsi > 0 %}<a class="btn btn-mbg-sunshine donation-claim-link" href="{% url 'klaim:claim_create' item.pk %}">Klaim</a>{% endif %}
           <a class="btn btn-mbg-green donation-detail-link" href="{{ item.get_absolute_url }}" aria-label="Lihat detail {{ item.nama }}"><span>Lihat detail</span>{% include 'donasi/partials/icons/arrow_right.html' %}</a>
         </div>
       </div>

@@ -6,7 +6,8 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from profil.models import JenisDonor, ProfilDonor
+from klaim.models import Claim, ClaimStatus
+from profil.models import Fakultas, JenisDonor, ProfilDonor, ProfilPenerima
 
 from .models import Donasi
 
@@ -38,6 +39,13 @@ class DonasiTests(TestCase):
             jenis=JenisDonor.KANTIN,
             kontak="lain@test.com",
         )
+        ProfilPenerima.objects.create(
+            user=self.recipient,
+            nama_lengkap="Penerima Uji",
+            nim="2600000001",
+            fakultas=Fakultas.FASILKOM,
+            kontak="penerima@test.com",
+        )
         self.start = timezone.now().replace(second=0, microsecond=0) + timedelta(hours=1)
         self.item = self.create_donation()
 
@@ -67,6 +75,21 @@ class DonasiTests(TestCase):
         }
         data.update(changes)
         return data
+
+    def create_claim(self, status, portions):
+        return Claim.objects.create(
+            recipient=self.recipient,
+            donor=self.owner,
+            donation_id=self.item.pk,
+            food_name=self.item.nama,
+            donor_name="Donor Uji",
+            pickup_location=self.item.lokasi,
+            pickup_deadline=self.item.waktu_akhir_pengambilan,
+            portions=portions,
+            pickup_time=self.start + timedelta(hours=1),
+            expires_at=self.start + timedelta(hours=2),
+            status=status,
+        )
 
     def test_list_and_detail_pages_can_be_opened(self):
         list_response = self.client.get(reverse("donasi:daftar"))
@@ -217,15 +240,45 @@ class DonasiTests(TestCase):
         self.assertEqual(self.item.status_tampilan, "Pengambilan selesai")
 
     def test_navigation_is_different_for_donor_and_recipient(self):
+        guest_html = self.client.get(reverse("donasi:daftar")).content.decode()
+        self.assertNotIn(">Dampak</a>", guest_html)
+
         self.client.force_login(self.owner)
-        donor_html = self.client.get(reverse("donasi:daftar")).content.decode()
+        donor_response = self.client.get(reverse("donasi:daftar"))
+        donor_html = donor_response.content.decode()
+        self.assertTemplateUsed(donor_response, "header.html")
+        self.assertTemplateUsed(donor_response, "footer.html")
         self.assertIn("Donasi saya", donor_html)
         self.assertIn("Klaim masuk", donor_html)
+        self.assertIn(reverse("klaim:incoming_claim_list"), donor_html)
+        self.assertNotIn(">Dampak</a>", donor_html)
 
         self.client.force_login(self.recipient)
-        recipient_html = self.client.get(reverse("donasi:daftar")).content.decode()
+        recipient_response = self.client.get(reverse("donasi:daftar"))
+        recipient_html = recipient_response.content.decode()
+        self.assertTemplateUsed(recipient_response, "header.html")
         self.assertIn("Cari makanan", recipient_html)
         self.assertIn("Klaim saya", recipient_html)
+        self.assertIn(reverse("klaim:claim_list"), recipient_html)
+        self.assertNotIn(">Dampak</a>", recipient_html)
+
+    def test_claim_button_only_appears_for_available_recipient(self):
+        claim_url = reverse("klaim:claim_create", args=[self.item.pk])
+
+        self.client.force_login(self.recipient)
+        response = self.client.get(reverse("donasi:daftar"))
+        self.assertContains(response, claim_url)
+        self.assertContains(response, "Klaim")
+        self.assertEqual(self.client.get(claim_url).status_code, 200)
+
+        self.item.jumlah_porsi = 0
+        self.item.save()
+        response = self.client.get(self.item.get_absolute_url())
+        self.assertNotContains(response, "Klaim makanan")
+
+        self.client.force_login(self.owner)
+        response = self.client.get(reverse("donasi:daftar"))
+        self.assertNotContains(response, claim_url)
 
     def test_only_owner_sees_the_edit_button(self):
         self.client.force_login(self.owner)
@@ -276,3 +329,14 @@ class DonasiTests(TestCase):
         self.assertIn("porsi diambil", html)
         self.assertIn("porsi tersisa", html)
         self.assertIn(f"<strong>{self.item.jumlah_porsi}</strong>", html)
+
+    def test_detail_uses_claim_data_for_portion_information(self):
+        self.create_claim(ClaimStatus.PENDING, 2)
+        self.create_claim(ClaimStatus.PICKED_UP, 3)
+        self.create_claim(ClaimStatus.CANCELLED, 1)
+        self.create_claim(ClaimStatus.EXPIRED, 1)
+
+        response = self.client.get(self.item.get_absolute_url())
+
+        self.assertEqual(response.context["jumlah_diklaim"], 5)
+        self.assertEqual(response.context["jumlah_diambil"], 3)

@@ -6,6 +6,4 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&family=Fredoka+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'donasi/donasi.css' %}">
 {% endblock %}
-{% block header %}{% include 'donasi/partials/header.html' %}{% endblock %}
-{% block footer %}{% include 'donasi/partials/footer.html' %}{% include 'donasi/partials/toast.html' %}{% endblock %}
-{% block extra_scripts %}<script src="{% static 'donasi/donasi.js' %}" defer></script>{% endblock %}
+{% block extra_scripts %}{% include 'donasi/partials/toast.html' %}<script src="{% static 'donasi/donasi.js' %}" defer></script>{% endblock %}

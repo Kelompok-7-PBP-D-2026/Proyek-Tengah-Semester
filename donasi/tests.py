@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from klaim.models import Claim, ClaimStatus
 from profil.models import Fakultas, JenisDonor, ProfilDonor, ProfilPenerima
+from venue.models import UnitVenue, Venue
 
 from .models import Donasi
 
@@ -46,10 +47,23 @@ class DonasiTests(TestCase):
             fakultas=Fakultas.FASILKOM,
             kontak="penerima@test.com",
         )
+        self.venue_fasilkom = Venue.objects.create(
+            nama="Fasilkom UI",
+            fakultas=UnitVenue.FASILKOM,
+            latitude="-6.364100",
+            longitude="106.827200",
+        )
+        self.venue_balairung = Venue.objects.create(
+            nama="Balairung UI",
+            fakultas=UnitVenue.KAMPUS,
+            latitude="-6.368200",
+            longitude="106.826600",
+        )
         self.start = timezone.now().replace(second=0, microsecond=0) + timedelta(hours=1)
         self.item = self.create_donation()
 
     def create_donation(self, **changes):
+        """Membuat Donasi uji dengan nilai default yang dapat dioverride."""
         data = {
             "donor": self.owner,
             "nama": "Nasi ayam",
@@ -62,6 +76,7 @@ class DonasiTests(TestCase):
         return Donasi.objects.create(**data)
 
     def form_data(self, **changes):
+        """Membuat data POST valid untuk pengujian form Donasi."""
         wib = ZoneInfo("Asia/Jakarta")
         data = {
             "nama": "Roti seminar",
@@ -77,6 +92,7 @@ class DonasiTests(TestCase):
         return data
 
     def create_claim(self, status, portions):
+        """Membuat Klaim uji yang terhubung ke Donasi utama."""
         return Claim.objects.create(
             recipient=self.recipient,
             donor=self.owner,
@@ -182,6 +198,37 @@ class DonasiTests(TestCase):
         )
         self.assertEqual(invalid_time.status_code, 400)
         self.assertIn("waktu_akhir_pengambilan", invalid_time.json()["errors"])
+
+        past_time = self.form_data(
+            waktu_tersedia="2020-01-01T10:00",
+            waktu_akhir_pengambilan="2020-01-01T11:00",
+        )
+        invalid_past_time = self.client.post(
+            create_url,
+            past_time,
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(invalid_past_time.status_code, 400)
+        self.assertIn(
+            "waktu_akhir_pengambilan",
+            invalid_past_time.json()["errors"],
+        )
+
+    def test_form_uses_registered_venue(self):
+        self.client.force_login(self.owner)
+        create_url = reverse("donasi:buat")
+
+        response = self.client.get(create_url)
+        self.assertContains(response, str(self.venue_fasilkom))
+        self.assertContains(response, reverse("venue:daftar"))
+
+        invalid_location = self.client.post(
+            create_url,
+            self.form_data(lokasi="Lokasi tidak terdaftar"),
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(invalid_location.status_code, 400)
+        self.assertIn("lokasi", invalid_location.json()["errors"])
 
     def test_search_location_and_status_filters(self):
         self.create_donation(
@@ -336,6 +383,7 @@ class DonasiTests(TestCase):
         self.assertIn("porsi diambil", html)
         self.assertIn("porsi tersisa", html)
         self.assertIn(f"<strong>{self.item.jumlah_porsi}</strong>", html)
+        self.assertContains(response, self.venue_fasilkom.get_absolute_url())
 
     def test_detail_uses_claim_data_for_portion_information(self):
         self.create_claim(ClaimStatus.PENDING, 2)

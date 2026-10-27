@@ -40,6 +40,8 @@ modul profil; tidak perlu membuat superuser khusus untuk memakai modul donasi.
 - Akhir pengambilan harus setelah waktu mulai dan masih berada di masa depan saat
   donasi aktif dibuat atau diubah.
 - Nama dan lokasi wajib diisi. Catatan bersifat opsional dan maksimal 200 karakter.
+- Lokasi dipilih dari data Venue agar nama lokasi, peta OpenStreetMap, dan daftar
+  donasi pada detail venue tetap sinkron.
 - Kesalahan form dikembalikan oleh `ModelForm` dan ditampilkan melalui toast.
 - Pemilik selalu diambil dari `request.user`; donor tidak dapat mengubah pemilik
   melalui isi form atau URL.
@@ -68,8 +70,9 @@ Parameter daftar: `q`, `lokasi`, `waktu` (`hari_ini`, `besok`, `pekan_ini`),
 ## Hubungan dengan modul kelompok
 
 - **Profil:** sudah dipakai untuk menentukan apakah pengguna adalah donor.
-- **Venue:** `lokasi` masih berupa teks. Integrasi ForeignKey menunggu model venue
-  milik anggota terkait tersedia.
+- **Venue:** sudah terintegrasi melalui pilihan Venue pada form dan tautan peta pada
+  detail. Nama venue tetap disimpan sebagai teks sesuai kontrak `venue.integrations`
+  dan diteruskan ke snapshot lokasi pada Klaim.
 - **Klaim:** sudah terintegrasi. Penerima dapat membuka form klaim dari card atau
   detail donasi. Navbar mengarah ke **Klaim masuk/Klaim saya**, stok diperbarui
   oleh proses klaim, dan statistik detail membaca data klaim yang sebenarnya.
@@ -92,8 +95,6 @@ python -m coverage report -m --omit="donasi/test*.py,donasi/migrations/*,donasi/
 node --check donasi/static/donasi/donasi.js
 ```
 
-Saat audit terakhir, 18 tes donasi dan 39 tes seluruh proyek lulus. Coverage kode
+Saat audit terakhir, 19 tes donasi dan 77 tes seluruh proyek lulus. Coverage kode
 Python inti app donasi adalah 86%. Tes sengaja memakai pola dasar `TestCase`,
 `self.client`, `reverse`, dan assertion Django agar mudah dipahami untuk live coding.
-
-Rincian hasil dan batas audit ada di [AUDIT.md](AUDIT.md).

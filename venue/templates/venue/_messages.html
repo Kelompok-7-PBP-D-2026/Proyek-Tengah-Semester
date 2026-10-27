@@ -1,0 +1,7 @@
+{% if messages %}
+<div class="venue-messages" role="status" aria-live="polite">
+  {% for message in messages %}
+  <div class="venue-alert {% if message.tags == 'error' %}is-error{% else %}is-success{% endif %}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}

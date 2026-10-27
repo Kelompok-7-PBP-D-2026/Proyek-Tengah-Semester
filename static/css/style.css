@@ -127,3 +127,473 @@ body {
 a.chip {
     cursor: pointer;
 }
+
+/* ===== Komponen Figma — Modul 1 (Profil Pengguna) =====
+   Token dan ukuran diambil dari page "MBG" Figma (Foundations + komponen
+   Button, Chip, Input). Dipakai halaman registrasi, masuk, profil, dan
+   daftar donor supaya tampilannya setara mockup "Modul 1 - Profil Pengguna". */
+:root {
+    --mbg-page: #FBF6E8;          /* bg/page  — latar kanvas Figma */
+    --mbg-border: #E4D8B6;        /* border/default — garis field & kartu */
+    --mbg-text-body: #0F2E19;     /* text/body */
+    --mbg-text-muted: #4A5D4F;    /* text/muted — teks bantu */
+    --mbg-on-action: #0F2E19;     /* text/on-action — teks di atas Carrot */
+    --mbg-accent: #FFCA26;        /* gold — heading kolom footer */
+}
+
+.mbg-page { /* kanvas tetap memakai --bs-body-bg (cream) supaya seragam dengan modul lain */ }
+
+/* MBG/Eyebrow: Poppins Bold 12, kapital, letter-spacing 1.44px */
+.mbg-eyebrow {
+    font-family: "Poppins", sans-serif;
+    font-weight: 700;
+    font-size: 0.75rem;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mbg-carrot);
+    margin: 0;
+}
+
+/* MBG/Caps/L: Inter Black 34, kapital, tracking -0.85px */
+.mbg-caps {
+    font-family: "Inter", "Poppins", sans-serif;
+    font-weight: 900;
+    font-size: clamp(1.75rem, 4.5vw, 2.125rem);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    text-transform: uppercase;
+    color: var(--mbg-forest);
+    margin: 0;
+}
+
+/* MBG/Body/L: Poppins Regular 19/28 */
+.mbg-lede {
+    font-size: 1.1875rem;
+    line-height: 1.475;
+    color: var(--mbg-text-muted);
+    margin: 0;
+}
+
+/* Kartu: radius 20, padding 28, putih */
+.mbg-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.75rem;
+    background-color: #fff;
+    border-radius: 20px;
+}
+
+/* MBG/Display/S: Fredoka Medium 20/22 */
+.mbg-card__title,
+.mbg-role__title {
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    line-height: 1.1;
+    color: var(--mbg-forest);
+    margin: 0;
+}
+
+/* Pemilih peran: dua kartu sejajar (layar 1A-1 / 1A-2) */
+.mbg-role-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.mbg-role {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    background-color: #fff;
+    border: 1.5px solid var(--mbg-border);
+    border-radius: 20px;
+    color: var(--mbg-text-body);
+    text-decoration: none;
+}
+
+.mbg-role:hover { border-color: var(--mbg-forest); color: var(--mbg-text-body); }
+
+/* Peran terpilih: latar tinted + border forest 3px (padding dikurangi
+   selisih border supaya tinggi kartu tidak melompat saat diklik) */
+.mbg-role--active {
+    background-color: var(--mbg-cream);
+    border: 3px solid var(--mbg-forest);
+    padding: calc(1.5rem - 1.5px);
+}
+
+.mbg-role__desc {
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    margin: 0;
+}
+
+/* Chip: Poppins Bold 13, pill */
+.mbg-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    align-self: flex-start;
+    padding: 0.4375rem 0.6875rem;
+    border-radius: 9999px;
+    background-color: var(--mbg-forest);
+    color: var(--mbg-cream);
+    font-family: "Poppins", sans-serif;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    line-height: 1.15;
+    text-decoration: none;
+}
+
+a.mbg-chip:hover { color: var(--mbg-cream); }
+
+/* Chip filter yang belum aktif: putih dengan garis border/default */
+a.mbg-chip--idle {
+    background-color: #fff;
+    color: var(--mbg-forest);
+    border: 1.5px solid var(--mbg-border);
+}
+
+a.mbg-chip--idle:hover { color: var(--mbg-forest); border-color: var(--mbg-forest); }
+
+/* Form: grid dua kolom, field min-height 48, border 2px border/default */
+.mbg-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.mbg-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+}
+
+.mbg-field--wide { grid-column: 1 / -1; }
+
+.mbg-field > label {
+    font-family: "Poppins", sans-serif;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    line-height: 1.15;
+    color: var(--mbg-forest);
+    margin: 0;
+}
+
+.mbg-field input:not([type="checkbox"]),
+.mbg-field select,
+.mbg-field textarea {
+    width: 100%;
+    min-height: 48px;
+    padding: 0.75rem 0.875rem;
+    background-color: #fff;
+    border: 2px solid var(--mbg-border);
+    border-radius: 12px;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--mbg-text-body);
+}
+
+.mbg-field textarea { min-height: 6rem; }
+
+.mbg-field input:focus,
+.mbg-field select:focus,
+.mbg-field textarea:focus {
+    outline: none;
+    border-color: var(--mbg-forest);
+    box-shadow: 0 0 0 3px rgba(25, 83, 43, 0.12);
+}
+
+.mbg-field input:disabled {
+    background-color: #f4f3ee;
+    color: var(--mbg-text-muted);
+}
+
+.mbg-help,
+.mbg-error {
+    font-family: "Poppins", sans-serif;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    line-height: 1.15;
+    margin: 0;
+}
+
+.mbg-help { color: var(--mbg-text-muted); }
+.mbg-error { color: var(--mbg-tomato); }
+
+/* Error: border Tomato (komponen Input state Error) */
+.mbg-field--error input,
+.mbg-field--error select,
+.mbg-field--error textarea { border-color: var(--mbg-tomato); }
+
+/* Baris aksi: teks bantu di kiri, tombol di kanan */
+.mbg-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Tombol setara komponen Button Figma (Primary Carrot, Outline forest) */
+.btn-mbg-carrot {
+    background-color: var(--mbg-carrot);
+    border: 2px solid var(--mbg-carrot);
+    color: var(--mbg-on-action);
+    font-weight: 700;
+    padding: 0.875rem 1.25rem;
+}
+
+.btn-mbg-carrot:hover { background-color: #d9530f; border-color: #d9530f; color: #fff; }
+
+.btn-mbg-line {
+    background-color: transparent;
+    border: 2px solid var(--mbg-forest);
+    color: var(--mbg-forest);
+    font-weight: 700;
+    padding: 0.75rem 1.25rem;
+}
+
+.btn-mbg-line:hover { background-color: var(--mbg-forest); color: var(--mbg-cream); }
+
+/* ---- Komponen layar 1B (Profil Saya), 1C (Edit Profil), 1D (Daftar Donor) ---- */
+.mbg-breadcrumb {
+    font-family: "Poppins", sans-serif;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--mbg-text-muted);
+    margin: 0;
+}
+
+.mbg-breadcrumb a { color: var(--mbg-text-muted); text-decoration: none; }
+.mbg-breadcrumb a:hover { color: var(--mbg-forest); text-decoration: underline; }
+
+/* Alert Figma: latar Kiwi, teks on-action */
+.mbg-alert {
+    background-color: var(--mbg-kiwi);
+    color: var(--mbg-on-action);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    font-family: "Poppins", sans-serif;
+    font-weight: 700;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+}
+
+.mbg-alert--info { background-color: var(--mbg-cream); color: var(--mbg-forest); }
+.mbg-alert--error { background-color: #fbe3e1; color: var(--mbg-tomato); }
+
+/* Avatar inisial */
+.mbg-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background-color: var(--mbg-forest);
+    color: var(--mbg-cream);
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 600;
+    font-size: 1.875rem;
+    line-height: 2rem;
+}
+
+.mbg-avatar--sm {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8125rem;
+    line-height: 1.15;
+    background-color: var(--mbg-sunshine);
+    color: var(--mbg-forest);
+    border: 2px solid var(--mbg-forest);
+}
+
+/* Chip tambahan (Figma: Chip) */
+.mbg-chip--success { background-color: var(--mbg-kiwi); color: var(--mbg-on-action); }
+.mbg-chip--role { background-color: var(--mbg-forest); color: var(--mbg-sunshine); }
+.mbg-chip--idle { background-color: #fff; color: var(--mbg-text-muted); border: 1.5px solid var(--mbg-border); }
+.mbg-chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* Kartu profil (1B, kolom kiri) */
+.mbg-profile-card { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+
+.mbg-profile-card__name {
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    line-height: 1.1;
+    color: var(--mbg-forest);
+    margin: 0;
+}
+
+.mbg-profile-card__org {
+    font-weight: 700;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--mbg-text-body);
+    margin: 0;
+}
+
+.mbg-profile-card__meta {
+    font-weight: 700;
+    font-size: 0.8125rem;
+    line-height: 1.15;
+    color: var(--mbg-text-muted);
+    margin: 0;
+}
+
+/* Daftar label + nilai (kartu Informasi kontak) */
+.mbg-info-list { display: flex; flex-direction: column; gap: 1rem; margin: 0; }
+
+.mbg-info-row { display: flex; gap: 1rem; }
+
+.mbg-info-row dt {
+    flex: 0 0 150px;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--mbg-text-muted);
+    margin: 0;
+}
+
+.mbg-info-row dd {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--mbg-text-body);
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 575.98px) {
+    .mbg-info-row { flex-direction: column; gap: 0.125rem; }
+    .mbg-info-row dt { flex: none; }
+}
+
+/* Kartu statistik */
+.mbg-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    height: 100%;
+    padding: 1.5rem;
+    background-color: #fff;
+    border-radius: 20px;
+}
+
+.mbg-stat__value {
+    font-family: "Fredoka One", "Fredoka", "Poppins", sans-serif;
+    font-weight: 400;
+    font-size: 3.25rem;
+    line-height: 1;
+    color: var(--mbg-forest);
+}
+
+.mbg-stat__label { font-size: 0.9375rem; line-height: 1.45; color: var(--mbg-text-muted); }
+
+/* Baris filter + pencarian (1D) */
+.mbg-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+}
+
+.mbg-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.mbg-search { width: 100%; max-width: 20rem; }
+
+/* Kartu donor (1D) */
+.mbg-donor-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+    padding: 1.5rem;
+    background-color: #fff;
+    border-radius: 20px;
+}
+
+.mbg-donor-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+
+.mbg-donor-card__name {
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    line-height: 1.1;
+    color: var(--mbg-forest);
+    margin: 0;
+}
+
+.mbg-donor-card__meta { font-size: 0.9375rem; line-height: 1.45; color: var(--mbg-text-muted); margin: 0; }
+.mbg-donor-card__count { font-weight: 700; font-size: 0.8125rem; line-height: 1.4; color: var(--mbg-text-body); margin: 0; }
+.mbg-donor-card__actions { margin-top: auto; padding-top: 0.25rem; }
+
+/* Pagination */
+.mbg-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 2rem; }
+
+.mbg-page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.75rem;
+    border: 1.5px solid var(--mbg-border);
+    border-radius: 12px;
+    background-color: #fff;
+    color: var(--mbg-forest);
+    font-weight: 700;
+    font-size: 0.9375rem;
+    text-decoration: none;
+}
+
+.mbg-page-link:hover { border-color: var(--mbg-forest); color: var(--mbg-forest); }
+.mbg-page-link--active { background-color: var(--mbg-forest); border-color: var(--mbg-forest); color: var(--mbg-cream); }
+.mbg-page-link--disabled { opacity: 0.45; pointer-events: none; }
+
+/* Tombol tambahan: Kiwi (Simpan perubahan) & Forest (Edit profil) */
+.btn-mbg-kiwi {
+    background-color: var(--mbg-kiwi);
+    border: 2px solid var(--mbg-kiwi);
+    color: var(--mbg-on-action);
+    font-weight: 700;
+    padding: 0.875rem 1.25rem;
+}
+
+.btn-mbg-kiwi:hover { background-color: #86a503; border-color: #86a503; color: var(--mbg-on-action); }
+
+.btn-mbg-forest {
+    background-color: var(--mbg-forest);
+    border: 2px solid var(--mbg-forest);
+    color: var(--mbg-cream);
+    font-weight: 700;
+    padding: 0.875rem 1.25rem;
+}
+
+.btn-mbg-forest:hover { background-color: var(--mbg-brand-hover, #134424); border-color: var(--mbg-brand-hover, #134424); color: var(--mbg-cream); }
+
+/* Field terkunci (mis. NIM & Peran di halaman edit) */
+.mbg-field input:disabled,
+.mbg-field select:disabled,
+.mbg-field textarea:disabled {
+    background-color: var(--mbg-cream);
+    color: var(--mbg-text-muted);
+    cursor: not-allowed;
+}
+
+.mbg-help-sm {
+    font-weight: 700;
+    font-size: 0.8125rem;
+    line-height: 1.15;
+    color: var(--mbg-text-muted);
+    margin: 0;
+}

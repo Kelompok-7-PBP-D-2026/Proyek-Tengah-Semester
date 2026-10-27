@@ -1,0 +1,12 @@
+{% comment %}
+Pesan Django (messages framework) dengan gaya komponen Alert Figma: latar Kiwi,
+teks on-action. Dipakai halaman-halaman Modul 1 karena base.html belum punya
+blok pesan (kalau nanti dipindah ke base.html, hapus include ini dari tiap halaman).
+{% endcomment %}
+{% if messages %}
+<div class="d-flex flex-column gap-2 mb-4">
+    {% for pesan in messages %}
+    <p class="mbg-alert mb-0{% if pesan.tags == 'error' %} mbg-alert--error{% elif pesan.tags == 'info' %} mbg-alert--info{% endif %}">{{ pesan }}</p>
+    {% endfor %}
+</div>
+{% endif %}

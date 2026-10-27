@@ -3,40 +3,91 @@
 {% block title %}Profil Saya — MBG{% endblock %}
 
 {% block content %}
-<section class="container py-5" style="max-width: 44rem;">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="font-display h3 text-uppercase text-forest mb-0">Profil <span class="text-carrot">Saya</span></h1>
-        <a class="btn btn-mbg-outline-green btn-sm px-3" href="{% url 'profil:edit_profil' %}">Edit profil</a>
-    </div>
+{% comment %}
+Layar "1B Profil Saya" pada page Figma "Modul 1 - Profil Pengguna":
+kartu profil + kartu Informasi kontak + tiga kartu statistik.
 
-    {% if donor %}
-    <div class="card shadow-sm">
-        <div class="card-body p-4">
-            <span class="chip mb-3">{{ donor.get_jenis_display }}</span>
-            <h2 class="font-display h4 text-forest">{{ donor.nama_unit }}</h2>
-            <dl class="row small mb-0 mt-3">
-                <dt class="col-sm-4">Kontak</dt><dd class="col-sm-8">{{ donor.kontak }}</dd>
-                <dt class="col-sm-4">Deskripsi</dt><dd class="col-sm-8">{{ donor.deskripsi|default:"—" }}</dd>
-                <dt class="col-sm-4">Status</dt>
-                <dd class="col-sm-8">{% if donor.terverifikasi %}<span class="badge-deadline px-3 py-1">Terverifikasi</span>{% else %}Menunggu verifikasi admin{% endif %}</dd>
-            </dl>
+Dua hal yang belum bisa ditiru persis dari desain:
+- baris "Lokasi utama" -> lokasi donor datanya milik modul Venue;
+- label "porsi tersalurkan" -> butuh data modul Klaim, jadi di sini ditulis
+  "porsi tersedia" karena angkanya dihitung dari donasi yang dibuat sendiri.
+
+Kartu statistik cuma tampil untuk peran donor (angkanya dari modul Donasi).
+{% endcomment %}
+<section class="mbg-page py-5">
+    <div class="container">
+        {% include "profil/partials/pesan.html" %}
+
+        <p class="mbg-eyebrow mb-3">Akun</p>
+        <h1 class="mbg-caps mb-4">Profil <span class="text-carrot">saya</span></h1>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="mbg-card h-100">
+                    <div class="mbg-profile-card">
+                        <span class="mbg-avatar">{{ profil.inisial }}</span>
+                        <h2 class="mbg-profile-card__name">
+                            {% if donor %}{{ donor.nama_unit }}{% else %}{{ penerima.nama_lengkap }}{% endif %}
+                        </h2>
+                        <div class="mbg-chip-row">
+                            <span class="mbg-chip mbg-chip--role">{% if donor %}Donor{% else %}Penerima{% endif %}</span>
+                            {% if profil.terverifikasi %}
+                            <span class="mbg-chip mbg-chip--success">Terverifikasi</span>
+                            {% else %}
+                            <span class="mbg-chip mbg-chip--idle">Belum diverifikasi</span>
+                            {% endif %}
+                        </div>
+                        <p class="mbg-profile-card__org">
+                            {% if donor %}{{ donor.get_jenis_display }}{% else %}{{ penerima.get_fakultas_display }}{% endif %}
+                        </p>
+                        <p class="mbg-profile-card__meta">Bergabung {{ bergabung }}</p>
+                        <a class="btn btn-mbg-forest w-100" href="{% url 'profil:edit_profil' %}">Edit profil</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8 d-flex flex-column gap-4">
+                <div class="mbg-card">
+                    <h2 class="mbg-card__title">Informasi kontak</h2>
+                    <dl class="mbg-info-list">
+                        {% if donor %}
+                        <div class="mbg-info-row"><dt>Jenis donor</dt><dd>{{ donor.get_jenis_display }}</dd></div>
+                        {% else %}
+                        <div class="mbg-info-row"><dt>NIM</dt><dd>{{ penerima.nim }}</dd></div>
+                        <div class="mbg-info-row"><dt>Fakultas</dt><dd>{{ penerima.get_fakultas_display }}</dd></div>
+                        {% endif %}
+                        <div class="mbg-info-row"><dt>Email</dt><dd>{{ user.email|default:"Belum diisi" }}</dd></div>
+                        <div class="mbg-info-row"><dt>Kontak</dt><dd>{{ profil.kontak|default:"Belum diisi" }}</dd></div>
+                        {% if donor %}
+                        <div class="mbg-info-row"><dt>Bio</dt><dd>{{ donor.deskripsi|default:"Belum diisi" }}</dd></div>
+                        {% endif %}
+                    </dl>
+                </div>
+
+                {% if statistik %}
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="mbg-stat">
+                            <span class="mbg-stat__value">{{ statistik.donasi_dibuat }}</span>
+                            <span class="mbg-stat__label">donasi dibuat</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mbg-stat">
+                            <span class="mbg-stat__value">{{ statistik.porsi_tersedia }}</span>
+                            <span class="mbg-stat__label">porsi tersedia</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mbg-stat">
+                            <span class="mbg-stat__value">{{ statistik.donasi_aktif }}</span>
+                            <span class="mbg-stat__label">donasi aktif</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
         </div>
     </div>
-    {% endif %}
-
-    {% if penerima %}
-    <div class="card shadow-sm">
-        <div class="card-body p-4">
-            <h2 class="font-display h4 text-forest">{{ penerima.nama_lengkap }}</h2>
-            <dl class="row small mb-0 mt-3">
-                <dt class="col-sm-4">NIM</dt><dd class="col-sm-8">{{ penerima.nim }}</dd>
-                <dt class="col-sm-4">Fakultas</dt><dd class="col-sm-8">{{ penerima.get_fakultas_display }}</dd>
-                <dt class="col-sm-4">Kontak</dt><dd class="col-sm-8">{{ penerima.kontak }}</dd>
-                <dt class="col-sm-4">Status</dt>
-                <dd class="col-sm-8">{% if penerima.terverifikasi %}<span class="badge-deadline px-3 py-1">Terverifikasi</span>{% else %}Menunggu verifikasi admin{% endif %}</dd>
-            </dl>
-        </div>
-    </div>
-    {% endif %}
 </section>
 {% endblock %}

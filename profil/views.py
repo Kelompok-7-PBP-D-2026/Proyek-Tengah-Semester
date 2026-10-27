@@ -1,7 +1,10 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from .forms import (
     DaftarDonorForm,
@@ -25,6 +28,53 @@ DAMPAK_LIST = [
     {"angka": "86", "label": "acara kampus ikut berdonasi"},
     {"angka": "480 kg", "label": "sampah makanan dicegah"},
 ]
+
+BULAN_INDONESIA = (
+    "Januari",
+    "Februari",
+    "Maret",
+    "April",
+    "Mei",
+    "Juni",
+    "Juli",
+    "Agustus",
+    "September",
+    "Oktober",
+    "November",
+    "Desember",
+)
+
+# Jumlah kartu donor per halaman di daftar donor (grid 3 kolom di Figma).
+DONOR_PER_HALAMAN = 9
+
+
+def _statistik_donor(user):
+    """Angka untuk kartu statistik di halaman profil donor.
+
+    Modul Donasi belum menyediakan API resmi, jadi angkanya dihitung langsung
+    dari model Donasi. Ini satu-satunya titik ketergantungan modul Profil ke
+    modul Donasi — kalau nama model/field-nya berubah, sesuaikan di sini.
+    """
+    from donasi.models import Donasi  # impor lokal: aman walau app belum siap
+
+    donasi_donor = Donasi.objects.filter(donor=user)
+    return {
+        "donasi_dibuat": donasi_donor.count(),
+        "porsi_tersedia": donasi_donor.aggregate(total=Sum("jumlah_porsi"))["total"] or 0,
+        "donasi_aktif": donasi_donor.filter(
+            waktu_akhir_pengambilan__gt=timezone.now()
+        ).count(),
+    }
+
+
+def _bulan_tahun(momen):
+    """Format tanggal gaya Indonesia, mis. 'Agustus 2026'.
+
+    LANGUAGE_CODE proyek masih 'en-us', jadi nama bulan tidak bisa diambil
+    langsung dari filter tanggal Django.
+    """
+    lokal = timezone.localtime(momen)
+    return f"{BULAN_INDONESIA[lokal.month - 1]} {lokal.year}"
 
 
 def home(request):
@@ -87,7 +137,15 @@ def profil_saya(request):
     if donor is None and penerima is None:
         messages.info(request, "Akunmu belum punya profil donor atau penerima.")
         return redirect("profil:daftar_donor")
-    return render(request, "profil/profil_saya.html", {"donor": donor, "penerima": penerima})
+    konteks = {
+        "donor": donor,
+        "penerima": penerima,
+        "profil": donor or penerima,
+        "bergabung": _bulan_tahun((donor or penerima).dibuat_pada),
+    }
+    if donor is not None:
+        konteks["statistik"] = _statistik_donor(request.user)
+    return render(request, "profil/profil_saya.html", konteks)
 
 
 @login_required
@@ -97,8 +155,10 @@ def edit_profil(request):
     penerima = ProfilPenerima.objects.filter(user=request.user).first()
     if donor is not None:
         instance, form_class = donor, ProfilDonorForm
+        peran = "Donor"
     elif penerima is not None:
         instance, form_class = penerima, ProfilPenerimaForm
+        peran = "Penerima"
     else:
         messages.info(request, "Akunmu belum punya profil untuk diedit.")
         return redirect("profil:daftar_donor")
@@ -111,7 +171,11 @@ def edit_profil(request):
             return redirect("profil:profil_saya")
     else:
         form = form_class(instance=instance)
-    return render(request, "profil/edit_profil.html", {"form": form})
+    return render(
+        request,
+        "profil/edit_profil.html",
+        {"form": form, "peran": peran, "profil": instance},
+    )
 
 
 def daftar_donor(request):
@@ -122,7 +186,7 @@ def daftar_donor(request):
     """
     jenis = request.GET.get("jenis", "")
     kata_kunci = request.GET.get("q", "").strip()
-    donor_qs = ProfilDonor.objects.all()
+    donor_qs = ProfilDonor.objects.annotate(jumlah_donasi=Count("user__donasi")).order_by("nama_unit")
     if jenis in JenisDonor.values:
         donor_qs = donor_qs.filter(jenis=jenis)
     else:
@@ -130,10 +194,26 @@ def daftar_donor(request):
     if kata_kunci:
         donor_qs = donor_qs.filter(nama_unit__icontains=kata_kunci)
 
+    # Angka di chip filter dihitung dari seluruh donor (bukan hasil filter),
+    # supaya angkanya tidak berubah-ubah saat pengguna memilih kategori.
+    chips_jenis = [{"nilai": "", "label": "Semua", "jumlah": ProfilDonor.objects.count()}]
+    for nilai, label in JenisDonor.choices:
+        chips_jenis.append(
+            {
+                "nilai": nilai,
+                "label": label,
+                "jumlah": ProfilDonor.objects.filter(jenis=nilai).count(),
+            }
+        )
+
+    halaman = Paginator(donor_qs, DONOR_PER_HALAMAN).get_page(request.GET.get("page"))
+
     context = {
-        "donor_list": donor_qs,
+        "donor_list": halaman,
+        "halaman": halaman,
         "jenis_aktif": jenis,
         "jenis_choices": JenisDonor.choices,
+        "chips_jenis": chips_jenis,
         "kata_kunci": kata_kunci,
         "jumlah": donor_qs.count(),
     }

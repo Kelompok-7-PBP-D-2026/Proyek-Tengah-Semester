@@ -3,38 +3,32 @@
 {% block title %}Daftar Donor — MBG{% endblock %}
 
 {% block content %}
-<section class="container py-5">
-    <h1 class="font-display h3 text-uppercase text-forest mb-1">Mitra <span class="text-carrot">Donor</span></h1>
-    <p class="text-muted mb-4">Cari mitra donor berdasarkan jenis atau nama unit. Hasil diperbarui tanpa memuat ulang halaman.</p>
+{% comment %}
+Layar "1D Daftar Donor" pada page Figma "Modul 1 - Profil Pengguna".
 
-    {% comment %}
-    Kotak pencarian ada di luar #daftar-donor-panel supaya fokus dan posisi kursor
-    tidak hilang saat panel hasilnya diganti HTMX. Nilai jenis yang sedang aktif
-    dikirim lewat hx-include dari input tersembunyi di dalam panel.
-    Tanpa JavaScript, chip tetap berfungsi penuh (href-nya sudah membawa jenis +
-    kata kunci), sedangkan formulir "Cari" hanya mengirim kata kunci saja.
-    {% endcomment %}
-    <form class="row g-2 align-items-end mb-4" method="get" action="{% url 'profil:daftar_donor' %}">
-        <div class="col-sm-6 col-lg-4">
-            <label class="form-label small fw-semibold" for="filter-q">Cari nama unit</label>
-            <input type="search" class="form-control" id="filter-q" name="q" value="{{ kata_kunci }}"
-                   placeholder="mis. Kantin"
-                   hx-get="{% url 'profil:daftar_donor' %}"
-                   hx-include="[name='jenis']"
-                   hx-target="#daftar-donor-panel"
-                   hx-swap="outerHTML"
-                   hx-push-url="true"
-                   hx-indicator="#daftar-donor-loading"
-                   hx-trigger="input changed delay:400ms, search">
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-mbg-outline-green" type="submit">Cari</button>
-        </div>
-        <div class="col-auto">
-            <span id="daftar-donor-loading" class="htmx-indicator text-muted small">Memuat…</span>
-        </div>
-    </form>
+Filter jenis dan pencarian dikirim lewat HTMX: setiap kontrol menargetkan
+#daftar-donor-panel dan hasilnya di-push ke URL (hx-push-url) supaya hasil
+filter tetap bisa di-bookmark dan di-refresh tanpa kehilangan state.
 
-    {% include "profil/partials/daftar_donor_panel.html" %}
+Seluruh panel -- chip filter, kolom cari, grid kartu, sampai pagination --
+ada di partials/daftar_donor_panel.html, karena file itulah yang dikirim balik
+sebagai partial untuk permintaan HX-Request.
+
+Belum ditiru dari desain: baris lokasi di kartu donor ("Fakultas Teknik"),
+karena lokasi donor datanya milik modul Venue.
+{% endcomment %}
+<section class="mbg-page py-5">
+    <div class="container">
+        {% include "profil/partials/pesan.html" %}
+
+        <p class="mbg-eyebrow mb-3">Jelajahi</p>
+        <h1 class="mbg-caps mb-3">Mitra <span class="text-carrot">donor</span> kampus</h1>
+        <p class="mbg-lede mb-4">
+            Penyelenggara acara, kantin, dan katering yang punya makanan surplus.
+            Kontak mereka terbuka setelah kamu masuk.
+        </p>
+
+        {% include "profil/partials/daftar_donor_panel.html" %}
+    </div>
 </section>
 {% endblock %}

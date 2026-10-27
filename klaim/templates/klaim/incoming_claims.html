@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static claim_extras %}
+
+{% block title %}Klaim Masuk — MBG{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'klaim/css/claim.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="claim-page">
+    <div class="claim-container">
+        {% include "klaim/_messages.html" %}
+
+        <p class="claim-eyebrow">Donor</p>
+        <h1 class="claim-title">Klaim <span class="claim-title__accent">Masuk</span></h1>
+
+        <div class="stat-grid">
+            {% for stat in stats %}
+            <div class="claim-card stat-card">
+                <p class="stat-card__value">{{ stat.value }}</p>
+                <p class="stat-card__label">{{ stat.label }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.object_list %}
+        <div class="claim-table-wrap">
+            <div class="table-responsive">
+                <table class="claim-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Penerima</th>
+                            <th scope="col">Makanan</th>
+                            <th scope="col">Porsi</th>
+                            <th scope="col">Waktu ambil</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for claim in page_obj %}
+                        {% with display_name=claim.recipient|profile_name display_label=claim.recipient|profile_label %}                        <tr>
+                            <td>{{ display_name }}</td>
+                            <td>
+                                {{ claim.food_name }}
+                                {% if claim.note %}<span class="claim-table__note">Catatan: {{ claim.note }}</span>{% endif %}
+                            </td>
+                            <td>{{ claim.portions }}</td>
+                            <td class="text-nowrap">{{ claim.pickup_time|id_datetime_short }}</td>
+                            <td>{% include "klaim/_status_badge.html" %}</td>
+                            <td>
+                                {% if claim.can_verify %}
+                                <button type="button" class="claim-btn claim-btn--forest claim-btn--sm"
+                                        data-verify-open
+                                        data-verify-url="{% url 'klaim:claim_verify_code' claim.pk %}"
+                                        data-recipient="{{ recipient_name }}">Setujui</button>
+                                {% elif claim.display_status == 'picked_up' %}
+                                <span class="claim-muted-text">Selesai</span>
+                                {% else %}
+                                <span class="claim-muted-text">Klaim dibatalkan</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endwith %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% include "klaim/_pagination.html" %}
+        {% else %}
+        <div class="claim-card claim-empty">
+            <p class="claim-empty__text">Belum ada klaim masuk.</p>
+        </div>
+        {% endif %}
+
+        <p class="claim-footnote">
+            Klik Setujui lalu masukkan kode klaim dari penerima. Klaim yang tidak diambil sampai batas waktu
+            dibatalkan otomatis dan porsinya kembali tersedia.
+        </p>
+    </div>
+
+    <dialog class="claim-modal" id="verify-dialog" aria-labelledby="verify-title">
+        <form method="post" class="claim-modal__form" data-verify-form novalidate>
+            {% csrf_token %}
+            <p class="claim-eyebrow">Verifikasi kode</p>
+            <h2 class="claim-modal__title" id="verify-title">Verifikasi kode klaim</h2>
+            <p class="claim-modal__text">
+                Minta kode ambil dari <span data-verify-recipient>penerima</span>, lalu masukkan di sini.
+                Klaim baru disetujui kalau kodenya cocok.
+            </p>
+            <label class="claim-label" for="verify-code-input">Kode klaim</label>
+            <input id="verify-code-input" name="pickup_code" type="text" maxlength="8" autocomplete="off"
+                   placeholder="MBG-XXXX" class="form-control claim-input" data-uppercase required>
+            <p class="claim-hint" data-verify-hint>Kode ada di halaman Detail Klaim penerima.</p>
+            <p class="claim-error" data-verify-error role="alert" hidden></p>
+            <div class="claim-modal__actions">
+                <button type="button" class="claim-btn claim-btn--outline" data-verify-close>Batal</button>
+                <button type="submit" class="claim-btn claim-btn--carrot">Verifikasi dan setujui</button>
+            </div>
+        </form>
+    </dialog>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'klaim/js/claim.js' %}" defer></script>
+{% endblock %}

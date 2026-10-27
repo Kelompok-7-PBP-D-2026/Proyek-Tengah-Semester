@@ -3,9 +3,11 @@
 
 {% block title %}Klaim Masuk — MBG{% endblock %}
 
-{% block content %}
+{% block extra_head %}
 <link rel="stylesheet" href="{% static 'klaim/css/claim.css' %}">
+{% endblock %}
 
+{% block content %}
 <div class="claim-page">
     <div class="claim-container">
         {% include "klaim/_messages.html" %}
@@ -100,6 +102,8 @@
         </form>
     </dialog>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script src="{% static 'klaim/js/claim.js' %}" defer></script>
 {% endblock %}

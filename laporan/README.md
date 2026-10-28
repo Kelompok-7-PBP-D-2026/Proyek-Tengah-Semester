@@ -74,10 +74,8 @@ Gunakan akun admin yang sudah ada jika tersedia; `createsuperuser` hanya
 perlu untuk membuat akun admin baru. Buka `http://127.0.0.1:8000/laporan/`.
 Dependency PDF otomatis terpasang melalui requirements utama.
 
-Untuk database lokal terpisah, tambahkan `--settings=laporan.local_settings`
-pada migrate, createsuperuser, dan runserver. Mode ini memakai
-`laporan/.local.sqlite3`; akun/klaim dari `db.sqlite3` tidak otomatis muncul.
-Jangan gunakan settings lokal untuk deployment.
+Modul memakai settings, URL, database, dan dependency utama proyek, sama seperti
+modul donasi dan klaim. Tidak diperlukan settings atau database tambahan.
 
 ## Pengujian
 
@@ -96,35 +94,17 @@ Batas data sumber tetap berlaku: `recipient` pada Claim menggunakan CASCADE.
 Penghapusan akun penerima dapat menghapus klaim sumber untuk perhitungan
 berikutnya; snapshot laporan yang sudah dibuat tetap tersimpan.
 
-## Standar penulisan kode
+## Struktur kode
 
-Konfigurasi di modul ini membatasi perapihan ke `laporan/`. File migrasi yang
-sudah dibuat tidak diformat ulang. Nama model/field tetap mengikuti domain
-Indonesia, kelas memakai PascalCase, dan fungsi memakai snake_case. Nama view
-menyebut objek laporan secara eksplisit; nama URL publik tetap sama agar tautan
-dan integrasi tidak berubah.
+- `models.py`, `forms.py`, `views.py`, `urls.py`: model, formulir, dan alur halaman.
+- `services.py`: validasi dan penyimpanan hasil perhitungan laporan.
+- `klaim_adapter.py`: agregasi data Claim sesuai periode.
+- `exports.py`: ekspor CSV dan PDF dari snapshot yang tersimpan.
+- `permissions.py`: pembatasan akses pengelola.
+- `tests.py`, `test_integrasi.py`: pengujian fitur dan integrasi Claim.
+- `migrations/`, `templates/`, `static/`, `templatetags/`: skema database dan tampilan.
 
-Gunakan indentasi empat spasi untuk Python dan dua spasi untuk HTML/CSS/JS.
-Ruff mengatur format Python pada panjang 88 karakter dan memeriksa import serta
-kesalahan dasar. djLint mengatur format template Django. `.editorconfig`
-menyamakan indentasi dan akhir baris pada editor yang mendukungnya.
-
-Pasang alat pengembangan dari direktori utama proyek:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r laporan\requirements-dev.txt
-.\.venv\Scripts\python.exe -m ruff check laporan
-.\.venv\Scripts\python.exe -m ruff format --check laporan
-.\.venv\Scripts\python.exe -m djlint laporan\templates --configuration laporan\pyproject.toml --check
-```
-
-Untuk merapikan perubahan sebelum commit:
-
-```powershell
-.\.venv\Scripts\python.exe -m ruff check laporan --fix
-.\.venv\Scripts\python.exe -m ruff format laporan
-.\.venv\Scripts\python.exe -m djlint laporan\templates --configuration laporan\pyproject.toml --reformat
-```
-
-Tetap jalankan tes setelah perubahan. Lolos formatter tidak membuktikan
-integrasi data Klaim atau deployment sudah selesai.
+Nama kelas memakai PascalCase, fungsi memakai snake_case, dan nama domain
+mengikuti istilah Indonesia yang digunakan proyek. Gunakan indentasi empat
+spasi untuk Python dan dua spasi untuk HTML/CSS/JS. Dependency dipasang melalui
+`requirements.txt` utama; tidak ada konfigurasi formatter khusus modul.

@@ -9,6 +9,8 @@ venv/
 
 # Django
 db.sqlite3
+.local.sqlite3
+.local.sqlite3-*
 staticfiles/
 media/
 .coverage

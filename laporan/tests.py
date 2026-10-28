@@ -33,7 +33,7 @@ def invalid_provider(start, end):
     return RingkasanDampak(total_porsi=-1, jumlah_donor=2, jumlah_penerima=7)
 
 
-@override_settings(ROOT_URLCONF="laporan.local_urls", LAPORAN_AGGREGATOR="")
+@override_settings(ROOT_URLCONF="pts_project.urls", LAPORAN_AGGREGATOR="")
 class LaporanTests(TestCase):
     @classmethod
     def setUpTestData(cls):

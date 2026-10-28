@@ -4,6 +4,7 @@ from .models import Donasi
 from .forms import DonasiForm
 
 
+# Mengatur tampilan dan fitur model Donasi pada halaman Django Admin.
 @admin.register(Donasi)
 class DonasiAdmin(admin.ModelAdmin):
     form = DonasiForm

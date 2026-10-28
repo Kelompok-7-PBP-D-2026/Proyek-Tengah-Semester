@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static claim_extras %}
+
+{% block title %}{{ claim.food_name }} — Klaim MBG{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'klaim/css/claim.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="claim-page">
+    <div class="claim-container">
+        {% include "klaim/_messages.html" %}
+
+        <nav class="claim-breadcrumb" aria-label="Breadcrumb">
+            <a href="{% url 'klaim:claim_list' %}">Klaim saya</a>
+            <span aria-hidden="true">&rsaquo;</span>
+            <span aria-current="page">{{ claim.food_name }}</span>
+        </nav>
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <section class="claim-card">
+                    <div class="claim-card__header">
+                        <p class="claim-eyebrow">Kode ambil</p>
+                        {% include "klaim/_status_badge.html" %}
+                    </div>
+
+                    <div class="pickup-code{% if not claim.is_code_valid %} pickup-code--inactive{% endif %}">
+                        <span class="pickup-code__value">{{ claim.pickup_code }}</span>
+                    </div>
+
+                    <p class="claim-lead">
+                        {% with status=claim.display_status %}
+                        {% if status == 'picked_up' %}
+                            Makanan sudah diambil. Terima kasih sudah membantu mengurangi limbah makanan!
+                        {% elif status == 'cancelled' %}
+                            Klaim dibatalkan, jadi kode ini tidak bisa dipakai.
+                        {% elif status == 'expired' %}
+                            Klaim kedaluwarsa karena makanan tidak diambil tepat waktu, jadi kode ini tidak bisa dipakai.
+                        {% else %}
+                            Tunjukkan kode ini ke panitia saat mengambil makanan. Ambil sebelum {{ claim.expires_at|id_time }}.
+                        {% endif %}
+                        {% endwith %}
+                    </p>
+
+                    <h2 class="claim-card__title">Status klaim</h2>
+                    <ol class="timeline">
+                        {% for step in timeline %}
+                        <li class="timeline__item">
+                            <span class="timeline__dot timeline__dot--{{ step.state }}" aria-hidden="true"></span>
+                            <div>
+                                <p class="timeline__label">{{ step.label }}</p>
+                                <p class="timeline__caption">{{ step.caption }}</p>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </section>
+            </div>
+
+            <div class="col-lg-5">
+                <section class="claim-card">
+                    <h2 class="claim-card__title">Rincian</h2>
+                    <dl class="detail-list">
+                        <dt>Makanan</dt><dd>{{ claim.food_name }}</dd>
+                        <dt>Jumlah porsi</dt><dd>{{ claim.portions }} porsi</dd>
+                        <dt>Donor</dt><dd>{{ claim.donor_name }}</dd>
+                        <dt>Lokasi</dt><dd>{{ claim.pickup_location }}</dd>
+                        <dt>Waktu ambil</dt><dd>{{ claim.pickup_time|id_datetime }}</dd>
+                        <dt>Batas ambil</dt><dd>{{ claim.expires_at|id_datetime }}</dd>
+                        {% if claim.note %}<dt>Catatan</dt><dd>{{ claim.note }}</dd>{% endif %}
+                    </dl>
+                </section>
+
+                <div class="claim-side-actions">
+                    {% if donation_detail_url %}
+                    <a class="claim-btn claim-btn--forest claim-btn--block" href="{{ donation_detail_url }}">Lihat donasi</a>
+                    {% endif %}
+                    {% if claim.can_cancel %}
+                    <form method="post" action="{% url 'klaim:claim_cancel' claim.pk %}" data-confirm="Batalkan klaim ini? Porsi akan dikembalikan ke donasi.">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="claim-btn claim-btn--danger claim-btn--block">Batalkan klaim</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'klaim/js/claim.js' %}" defer></script>
+{% endblock %}

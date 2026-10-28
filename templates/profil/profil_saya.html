@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Profil Saya — MBG{% endblock %}
+
+{% block content %}
+<section class="container py-5" style="max-width: 44rem;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="font-display h3 text-uppercase text-forest mb-0">Profil <span class="text-carrot">Saya</span></h1>
+        <a class="btn btn-mbg-outline-green btn-sm px-3" href="{% url 'profil:edit_profil' %}">Edit profil</a>
+    </div>
+
+    {% if donor %}
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <span class="chip mb-3">{{ donor.get_jenis_display }}</span>
+            <h2 class="font-display h4 text-forest">{{ donor.nama_unit }}</h2>
+            <dl class="row small mb-0 mt-3">
+                <dt class="col-sm-4">Kontak</dt><dd class="col-sm-8">{{ donor.kontak }}</dd>
+                <dt class="col-sm-4">Deskripsi</dt><dd class="col-sm-8">{{ donor.deskripsi|default:"—" }}</dd>
+                <dt class="col-sm-4">Status</dt>
+                <dd class="col-sm-8">{% if donor.terverifikasi %}<span class="badge-deadline px-3 py-1">Terverifikasi</span>{% else %}Menunggu verifikasi admin{% endif %}</dd>
+            </dl>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if penerima %}
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h2 class="font-display h4 text-forest">{{ penerima.nama_lengkap }}</h2>
+            <dl class="row small mb-0 mt-3">
+                <dt class="col-sm-4">NIM</dt><dd class="col-sm-8">{{ penerima.nim }}</dd>
+                <dt class="col-sm-4">Fakultas</dt><dd class="col-sm-8">{{ penerima.get_fakultas_display }}</dd>
+                <dt class="col-sm-4">Kontak</dt><dd class="col-sm-8">{{ penerima.kontak }}</dd>
+                <dt class="col-sm-4">Status</dt>
+                <dd class="col-sm-8">{% if penerima.terverifikasi %}<span class="badge-deadline px-3 py-1">Terverifikasi</span>{% else %}Menunggu verifikasi admin{% endif %}</dd>
+            </dl>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'venue/base.html' %}
+{% load venue_extras %}
+{% block title %}{{ venue.nama }} — MBG{% endblock %}
+{% block content %}
+<section class="venue-shell venue-content">
+  {% include 'venue/_messages.html' %}
+  <nav class="venue-breadcrumb" aria-label="Breadcrumb"><a href="{% url 'venue:daftar' %}">Venue</a><span aria-hidden="true">›</span><span>{{ venue.nama }}</span></nav>
+  <h1 class="venue-heading venue-heading--detail">{{ venue.nama_awal|upper }}{% if venue.nama_sisa %} <span>{{ venue.nama_sisa|upper }}</span>{% endif %}</h1>
+
+  <div class="venue-detail-grid">
+    <div>
+      <div id="venue-map" class="venue-map venue-map--detail" data-mode="detail" data-lat="{{ venue.latitude|stringformat:'f' }}" data-lng="{{ venue.longitude|stringformat:'f' }}" role="region" aria-label="Peta {{ venue.nama }}"></div>
+      <article class="venue-panel venue-info">
+        <h2 class="venue-section-title">Informasi venue</h2>
+        {% include 'venue/_mode_switch.html' %}
+        <dl class="venue-facts">
+          <dt>Fakultas</dt><dd>{{ venue.get_fakultas_display }}</dd>
+          <dt>Gedung</dt><dd>{{ venue.gedung }}</dd>
+          <dt>Koordinat</dt><dd>{{ venue.latitude|koma:4 }} &nbsp;·&nbsp; {{ venue.longitude|koma:4 }}</dd>
+          <dt>Jarak</dt><dd><span class="venue-distance" data-venue-lat="{{ venue.latitude|stringformat:'f' }}" data-venue-lng="{{ venue.longitude|stringformat:'f' }}"><span data-km>{{ venue.jarak_teks }} km</span> <span data-asal>{% if dari_pengguna %}dari lokasimu{% else %}dari pusat kampus{% endif %}</span></span></dd>
+          <dt>Akses</dt><dd>{{ venue.deskripsi_akses|default:"Belum ada deskripsi akses." }}</dd>
+        </dl>
+      </article>
+    </div>
+    <aside class="venue-sidebar">
+      {% if can_manage %}
+      <section class="venue-panel">
+        <h2 class="eyebrow text-carrot">Aksi</h2>
+        <div class="d-grid gap-3">
+          <a class="btn btn-mbg-green" href="{% url 'venue:edit' venue.pk %}">Edit venue</a>
+          <button class="btn btn-mbg-outline-green" type="button" data-bs-toggle="modal" data-bs-target="#hapus-modal">Hapus venue</button>
+        </div>
+      </section>
+      {% endif %}
+      <section class="venue-panel">
+        <h2 class="venue-section-title">Donasi di venue ini</h2>
+        {% if donasi_list %}
+        <ul class="venue-donasi">
+          {% for d in donasi_list %}
+          <li>
+            <div><strong>{{ d.nama }}</strong><span>{{ d.jumlah_porsi }} porsi</span></div>
+            <span class="venue-status {% if d.jumlah_porsi == 0 %}is-habis{% endif %}"><i aria-hidden="true"></i>{{ d.status_tampilan }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="venue-muted">Belum ada donasi aktif di venue ini.</p>
+        {% endif %}
+        <a class="btn btn-mbg-outline-green w-100" href="{% url 'donasi:daftar' %}?lokasi={{ venue.nama|urlencode }}">Lihat semua donasi</a>
+      </section>
+    </aside>
+  </div>
+</section>
+
+{% if can_manage %}
+<div class="modal fade" id="hapus-modal" tabindex="-1" aria-labelledby="hapus-judul" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content venue-delete-card">
+      <div class="venue-delete-icon" aria-hidden="true">!</div>
+      <h2 id="hapus-judul" class="font-display">Hapus venue ini?</h2>
+      <p>“{{ venue.nama }}” akan hilang dari peta dan daftar venue.</p>
+      {% if donasi_aktif %}<p class="venue-delete-warning" role="alert">Ada {{ donasi_aktif }} donasi aktif di venue ini. Pindahkan lokasinya dulu.</p>{% endif %}
+      <form method="post" action="{% url 'venue:hapus' venue.pk %}">
+        {% csrf_token %}
+        <div class="d-flex justify-content-center gap-3">
+          <button class="btn btn-mbg-outline-green" type="button" data-bs-dismiss="modal">Batal</button>
+          <button class="btn venue-danger" type="submit" {% if donasi_aktif %}disabled{% endif %}>Ya, hapus</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

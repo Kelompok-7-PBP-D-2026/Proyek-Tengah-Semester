@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar Donor — MBG{% endblock %}
+
+{% block content %}
+<section class="container py-5">
+    <h1 class="font-display h3 text-uppercase text-forest mb-1">Mitra <span class="text-carrot">Donor</span></h1>
+    <p class="text-muted mb-4">Cari mitra donor berdasarkan jenis atau nama unit. Hasil diperbarui tanpa memuat ulang halaman.</p>
+
+    {% comment %}
+    Kotak pencarian ada di luar #daftar-donor-panel supaya fokus dan posisi kursor
+    tidak hilang saat panel hasilnya diganti HTMX. Nilai jenis yang sedang aktif
+    dikirim lewat hx-include dari input tersembunyi di dalam panel.
+    Tanpa JavaScript, chip tetap berfungsi penuh (href-nya sudah membawa jenis +
+    kata kunci), sedangkan formulir "Cari" hanya mengirim kata kunci saja.
+    {% endcomment %}
+    <form class="row g-2 align-items-end mb-4" method="get" action="{% url 'profil:daftar_donor' %}">
+        <div class="col-sm-6 col-lg-4">
+            <label class="form-label small fw-semibold" for="filter-q">Cari nama unit</label>
+            <input type="search" class="form-control" id="filter-q" name="q" value="{{ kata_kunci }}"
+                   placeholder="mis. Kantin"
+                   hx-get="{% url 'profil:daftar_donor' %}"
+                   hx-include="[name='jenis']"
+                   hx-target="#daftar-donor-panel"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   hx-indicator="#daftar-donor-loading"
+                   hx-trigger="input changed delay:400ms, search">
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-mbg-outline-green" type="submit">Cari</button>
+        </div>
+        <div class="col-auto">
+            <span id="daftar-donor-loading" class="htmx-indicator text-muted small">Memuat…</span>
+        </div>
+    </form>
+
+    {% include "profil/partials/daftar_donor_panel.html" %}
+</section>
+{% endblock %}

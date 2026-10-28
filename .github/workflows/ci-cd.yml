@@ -1,0 +1,80 @@
+name: CI/CD
+
+# Test jalan setiap ada pull request ke main dan setiap push ke main.
+# Deploy ke PWS hanya jalan setelah test lulus DAN hanya dari main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Workflow ini cuma perlu membaca kode repositori.
+permissions:
+  contents: read
+
+# Satu antrean per branch. Run lama di PR boleh dibatalkan kalau ada push baru,
+# tapi deploy ke PWS tidak pernah dibatalkan di tengah jalan.
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+
+      - name: Siapkan Python
+        uses: actions/setup-python@v5
+        with:
+          # Disamakan dengan versi Python di PWS (terlihat di log deploy: python3.13).
+          python-version: "3.13"
+          cache: pip
+
+      - name: Pasang dependensi
+        run: pip install -r requirements-dev.txt
+
+      - name: Cek konfigurasi Django
+        run: python manage.py check
+
+      - name: Pastikan tidak ada perubahan model yang belum punya migrasi
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Jalankan unit test
+        run: |
+          coverage run manage.py test
+          coverage report
+
+  deploy:
+    name: Deploy ke PWS
+    needs: test
+    timeout-minutes: 10
+    # Hanya dari push ke main, bukan dari pull request.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push ke PWS
+        env:
+          # Jangan sampai git menunggu input username/password kalau kredensial salah.
+          GIT_TERMINAL_PROMPT: "0"
+          # Secret ini berisi URL git PWS lengkap dengan kredensial pemilik
+          # proyek (lihat README bagian CI/CD). Buat dulu di
+          # Settings > Secrets and variables > Actions sebelum merge ke main.
+          PWS_URL: ${{ secrets.PWS_URL }}
+        run: |
+          if [ -z "$PWS_URL" ]; then
+            echo "::warning::Secret PWS_URL belum dibuat, deploy ke PWS dilewati."
+            exit 0
+          fi
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          # HEAD:master = commit yang baru saja lulus test di main dikirim ke branch master PWS.
+          git push "$PWS_URL" HEAD:master

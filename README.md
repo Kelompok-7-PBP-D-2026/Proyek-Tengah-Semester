@@ -131,6 +131,8 @@ Otomatisasi ada di `.github/workflows/ci-cd.yml` dan terdiri dari dua job:
 https://<username-PWS>:<password-PWS>@pws.cs.ui.ac.id/immanuel.marvin/pts-surplus
 ```
 
-Kredensialnya milik akun pemilik proyek PWS, jadi yang bisa mengisi secret ini adalah pemilik proyek sekaligus admin repositori. **Buat secret ini sebelum workflow di-merge ke `main`**, supaya tidak ada workflow merah yang gagal deploy. Kalau `PWS_URL` masih kosong, job `deploy` tidak gagal — hanya menulis peringatan dan melewati deploy.
+Kredensialnya milik akun pemilik proyek PWS, jadi yang bisa mengisi secret ini adalah pemilik proyek sekaligus admin repositori. Username dan password-nya diambil dari dashboard PWS: **Project → Settings → Git Credentials** (Username dan Git Password; password ini hanya tampil sekali, kalau lupa klik **Regenerate**). Ini bukan password SSO. Kalau password mengandung karakter khusus, tulis dalam bentuk URL-encoded (misalnya `@` jadi `%40`, `!` jadi `%21`). **Buat secret ini sebelum workflow di-merge ke `main`**, supaya tidak ada workflow merah yang gagal deploy. Kalau `PWS_URL` masih kosong, job `deploy` tidak gagal — hanya menulis peringatan dan melewati deploy.
+
+Workflow memakai Python 3.13, sama dengan versi di PWS. Setelah workflow aktif, sebaiknya aktifkan juga aturan di **Settings → Branches → Branch protection rule** untuk `main`: wajib lulus status check `Test` sebelum pull request boleh di-merge.
 
 Deploy tidak pernah jalan dari branch fitur, jadi pekerjaan di branch aman: kode baru sampai ke PWS setelah pull request-nya di-merge ke `main`.

@@ -8,10 +8,21 @@ on:
   pull_request:
     branches: [main]
 
+# Workflow ini cuma perlu membaca kode repositori.
+permissions:
+  contents: read
+
+# Satu antrean per branch. Run lama di PR boleh dibatalkan kalau ada push baru,
+# tapi deploy ke PWS tidak pernah dibatalkan di tengah jalan.
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Ambil kode
         uses: actions/checkout@v4
@@ -19,7 +30,8 @@ jobs:
       - name: Siapkan Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          # Disamakan dengan versi Python di PWS (terlihat di log deploy: python3.13).
+          python-version: "3.13"
           cache: pip
 
       - name: Pasang dependensi
@@ -39,6 +51,7 @@ jobs:
   deploy:
     name: Deploy ke PWS
     needs: test
+    timeout-minutes: 10
     # Hanya dari push ke main, bukan dari pull request.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -50,6 +63,8 @@ jobs:
 
       - name: Push ke PWS
         env:
+          # Jangan sampai git menunggu input username/password kalau kredensial salah.
+          GIT_TERMINAL_PROMPT: "0"
           # Secret ini berisi URL git PWS lengkap dengan kredensial pemilik
           # proyek (lihat README bagian CI/CD). Buat dulu di
           # Settings > Secrets and variables > Actions sebelum merge ke main.
@@ -61,4 +76,5 @@ jobs:
           fi
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git push "$PWS_URL" "$(git branch --show-current):master"
+          # HEAD:master = commit yang baru saja lulus test di main dikirim ke branch master PWS.
+          git push "$PWS_URL" HEAD:master

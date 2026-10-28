@@ -2,7 +2,7 @@ from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from django.contrib import messages
-from django.contrib.auth.views import LoginView, redirect_to_login
+from django.contrib.auth.views import redirect_to_login
 from django.core.paginator import Paginator
 from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -18,7 +18,6 @@ from .models import Donasi
 from .permissions import is_donor, is_recipient
 
 WIB = ZoneInfo("Asia/Jakarta")
-LOGIN_URL = "donasi:login"
 
 
 def wants_json(request):
@@ -32,7 +31,7 @@ def donor_access_error(request):
                 {"message": "Silakan masuk untuk mengelola donasi."},
                 status=401,
             )
-        return redirect_to_login(request.get_full_path(), reverse(LOGIN_URL))
+        return redirect_to_login(request.get_full_path())
 
     if not is_donor(request.user):
         if wants_json(request):
@@ -56,11 +55,6 @@ def layout_context(request):
         "is_donor": donor,
         "is_recipient": is_recipient(request.user),
     }
-
-
-class DonasiLoginView(LoginView):
-    def get_context_data(self, **kwargs):
-        return {**super().get_context_data(**kwargs), **layout_context(self.request)}
 
 
 def filtered_donations(request):
@@ -122,7 +116,7 @@ def serialize_donasi(item, request):
 @translation.override("id")
 def daftar(request):
     if request.GET.get("mine") == "1" and not request.user.is_authenticated:
-        return redirect_to_login(request.get_full_path(), reverse(LOGIN_URL))
+        return redirect_to_login(request.get_full_path())
     items, filters = filtered_donations(request)
     page = Paginator(items, 6).get_page(request.GET.get("page"))
     context = {

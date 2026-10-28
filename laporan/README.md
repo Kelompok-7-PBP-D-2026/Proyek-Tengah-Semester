@@ -1,113 +1,100 @@
 # Modul 5 — Laporan Dampak
 
-## Acuan tampilan Figma
+## Integrasi dan acuan desain
 
-Tampilan mengikuti halaman `Modul 5 - Laporan Dampak` pada file
-`MT2ZypZ7HGnSp8RB2AaWKt`: 5A Daftar (`102:1589`), 5B Buat (`102:1737`),
-5C Detail (`102:1816`), 5D Edit (`102:1935`), dan 5E Konfirmasi Hapus (`102:2012`).
-Navbar 73px, konten lebar 1024px, form 824px, font Inter/Poppins/Fredoka,
-warna, kartu, tabel, logo dan ikon asli, serta footer mengikuti desain tersebut.
-Perilaku responsif ditambahkan untuk ponsel karena frame rujukan berukuran desktop.
+Modul tersedia langsung di `/laporan/` melalui konfigurasi utama aplikasi.
+Menu Laporan pada navigasi admin dan footer terhubung ke dashboard; logo MBG
+kembali ke beranda, dan tautan Venue, Daftar, serta Verifikasi memakai URL aplikasi.
 
-Data contoh Figma tidak dimasukkan ke database pengguna. Statistik tahunan memakai
-provider untuk satu periode tahunan, bukan penjumlahan laporan yang bisa tumpang
-tindih. Tanpa provider, statistik dan pratinjau tetap `—`. Tabel rincian donor
-masih menampilkan status belum tersedia sampai kontrak data Klaim mendukungnya.
-Judul form opsional dan otomatis memakai periode. Tombol hitung ulang pada edit
-memakai periode form yang sudah divalidasi; tombol nonaktif saat sumber belum ada.
-Pencarian, informasi tambahan, dan akses keluar tetap tersedia melalui bagian
-yang dapat dibuka. Konfirmasi hapus memakai dialog dengan fokus keyboard dan Escape.
-Tautan fitur anggota lain yang belum tersedia ditandai nonaktif.
+Tampilan mengikuti file Figma `MT2ZypZ7HGnSp8RB2AaWKt`: 5A Daftar
+(`102:1589`), 5B Buat (`102:1737`), 5C Detail (`102:1816`), 5D Edit
+(`102:1935`), dan 5E Konfirmasi Hapus (`102:2012`). Warna, font,
+kartu statistik, tabel, logo, dan ukuran konten mengikuti desain desktop;
+layout menyesuaikan ponsel. Angka contoh desain tidak dimasukkan ke database.
 
-Semua kode modul ini berada di `laporan/`. App lain, konfigurasi URL utama,
-template bersama, dan database utama tidak perlu diubah untuk mencoba modul.
+## Aturan perhitungan
 
-## Yang sudah tersedia
+`LAPORAN_AGGREGATOR = "laporan.klaim_adapter.agregasi"` aktif secara default.
+Provider membaca `klaim.Claim` tanpa mengubah klaim atau stok donasi:
 
-- Model laporan tersimpan: judul, periode inklusif awal–akhir, catatan, pembuat,
-  status, total porsi, jumlah donor/penerima unik, dan waktu perhitungan.
-- CRUD draf dengan validasi periode, daftar berpaginasi, pencarian, dan filter status.
-- Akses hanya untuk akun aktif dengan `is_staff` atau `is_superuser`. Login saja
-  tidak cukup. Seluruh pengelola memiliki akses laporan tingkat kampus.
-- Dashboard dampak tahunan dari sumber data, dengan jumlah arsip dan filter status.
-  Tidak menjumlahkan dampak antar laporan karena periodenya bisa tumpang tindih.
-- PDF dan tabel CSV dari satu laporan tersimpan. Draf diberi penanda jelas;
-  nilai `NULL` ditampilkan sebagai “belum tersedia”, bukan nol.
-- Perubahan periode menghapus hasil hitungan lama; perubahan catatan/judul saja
-  mempertahankan hasil. Admin Django hanya menyediakan tampilan baca agar
-  perubahan tidak melewati alur validasi tersebut.
-- CSRF untuk mutasi, hapus melalui POST, escaping HTML/PDF, dan perlindungan
-  formula injection pada CSV.
+- Hanya `status="picked_up"` dengan `picked_up_at` terisi yang dihitung.
+- Periode memakai waktu pengambilan aktual dalam **Asia/Jakarta (WIB)**,
+  mulai pukul 00:00:00 sampai 23:59:59.999999 pada tanggal akhir, inklusif.
+  Waktu reservasi, pembuatan klaim, dan batas ambil bukan dasar periode.
+- Porsi adalah jumlah `portions`; donor dan penerima dihitung dari ID akun unik.
+  Orang yang menerima dari beberapa donor tetap dihitung satu kali pada total.
+- Rincian donor berisi nama unit, jenis donor, porsi, serta penerima unik per donor.
+  Akun tanpa profil memakai nama pada klaim atau username dan jenis belum
+  diklasifikasikan. Akun berbeda dengan nama sama tetap donor berbeda.
+- Klaim dengan donor yang dihapus digabung dalam baris "Donor dihapus".
+  Porsi dan penerima tetap dihitung; identitas yang hilang tidak direka ulang
+  dan tidak ditambahkan ke jumlah donor unik. Catatan ini muncul pada detail/ekspor.
+- Periode tanpa klaim menghasilkan nol. Sumber gagal dihitung menampilkan
+  kesalahan, bukan angka nol palsu.
 
-## Menjalankan modul secara terpisah (PowerShell)
+Dashboard menghitung satu periode tahunan langsung dari klaim, bukan
+menjumlahkan laporan yang mungkin memiliki periode tumpang tindih.
 
-Jalankan dari folder utama `Proyek-Tengah-Semester`, menggunakan virtual
-environment proyek yang sudah berisi requirements utama:
+## Alur laporan
+
+1. Admin aktif (`is_staff` atau `is_superuser`) memilih tanggal pada Buat Laporan.
+   Judul kosong otomatis memakai periode. Pratinjau diperbarui lewat GET JSON
+   `/laporan/pratinjau/`, tanpa menyimpan laporan. Tampilan awal tersedia tanpa JS.
+2. Buat laporan menghitung ulang di server dan menyimpan total, jumlah klaim,
+   rincian donor, pembuat, dan waktu perhitungan sebagai satu snapshot.
+   Angka atau pembuat yang dikirim klien diabaikan.
+3. Detail, CSV, dan PDF membaca snapshot yang sama. Perubahan sumber/profil
+   setelahnya tidak diam-diam mengubah laporan tersimpan.
+4. Perubahan tanggal atau tombol Hitung ulang menghitung snapshot baru.
+   Perubahan judul/catatan saja mempertahankan snapshot. Kegagalan hitung
+   membatalkan perubahan sehingga periode dan hasil lama tetap konsisten.
+5. Hapus membutuhkan konfirmasi dan POST ber-CSRF. Escape membatalkan dialog.
+
+Migrasi `0002` menambahkan kolom nullable tanpa mengubah laporan lama.
+Laporan lama tanpa rincian tetap bisa dibuka/diekspor; tekan **Hitung dampak**
+untuk mengisi rincian dari sumber terkini. Jika provider sengaja dinonaktifkan,
+mode draf tetap tersedia, dengan angka belum tersedia (berbeda dari nol).
+
+CSV melindungi teks dari formula injection; PDF/HTML meng-escape teks pengguna.
+Ekspor menyertakan rincian donor dan catatan, dengan tabel PDF berulang judul
+kolom saat melewati satu halaman. Tidak ada klaim kg/CO2e tanpa sumber data.
+
+## Menjalankan aplikasi (PowerShell)
+
+Dari folder utama proyek dengan virtual environment aktif:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -r laporan\requirements.txt
-.\.venv\Scripts\python.exe manage.py migrate --settings=laporan.local_settings
-.\.venv\Scripts\python.exe manage.py createsuperuser --settings=laporan.local_settings
-.\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8001 --settings=laporan.local_settings
+python -m pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
 ```
 
-Buka `http://127.0.0.1:8001/laporan/`. Buat akun lokal sendiri melalui perintah
-`createsuperuser`; tidak ada akun atau kata sandi bawaan.
+Gunakan akun admin yang sudah ada jika tersedia; `createsuperuser` hanya
+perlu untuk membuat akun admin baru. Buka `http://127.0.0.1:8000/laporan/`.
+Dependency PDF otomatis terpasang melalui requirements utama.
 
-Settings lokal memakai database terpisah `laporan/.local.sqlite3` yang diabaikan
-Git. Akun/data dari `db.sqlite3` utama tidak otomatis muncul. File settings ini
-hanya untuk pengembangan, bukan deployment. URL utama proyek tetap utuh;
-perintah runserver biasa belum memasang `/laporan/`.
+Untuk database lokal terpisah, tambahkan `--settings=laporan.local_settings`
+pada migrate, createsuperuser, dan runserver. Mode ini memakai
+`laporan/.local.sqlite3`; akun/klaim dari `db.sqlite3` tidak otomatis muncul.
+Jangan gunakan settings lokal untuk deployment.
 
 ## Pengujian
 
 ```powershell
-.\.venv\Scripts\python.exe manage.py test laporan --settings=laporan.local_settings
-.\.venv\Scripts\python.exe manage.py check --settings=laporan.local_settings
-.\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run --settings=laporan.local_settings
+python manage.py test
+python manage.py check
+python manage.py makemigrations --check --dry-run
 ```
 
-Tests menggunakan database sementara. Provider palsu pada `tests.py` hanya
-untuk menguji kontrak integrasi; jangan dipasang dalam settings aplikasi nyata.
+`tests.py` mempertahankan pengujian CRUD, otorisasi, CSRF, mode draf, dan ekspor.
+`test_integrasi.py` menguji model Claim nyata, batas WIB, keunikan akun,
+snapshot, pratinjau, rollback, rincian donor, navigasi utama, dan ekspor.
+Tests memakai database sementara; provider palsu hanya untuk pengujian.
 
-## Batas saat ini dan kontrak integrasi Klaim
-
-Model `klaim.Claim` sudah tersedia setelah pembaruan `main` digabungkan.
-Modul laporan masih menggunakan kontrak provider dan belum memiliki query
-agregasi produksi: tombol hitung nonaktif secara default dan endpoint tetap
-menolak perhitungan tanpa sumber data. CRUD dan ekspor draf sudah berfungsi.
-Jangan menyamakan stok `Donasi.jumlah_porsi` dengan jumlah makanan tersalurkan.
-
-Setelah skema Klaim disepakati, buat provider di dalam modul laporan, misalnya
-`laporan.klaim_adapter.agregasi`, lalu konfigurasikan `LAPORAN_AGGREGATOR` ke
-path tersebut. Provider menerima `(periode_mulai, periode_selesai)` berupa
-`datetime.date` dan mengembalikan `laporan.services.RingkasanDampak`:
-
-```python
-RingkasanDampak(total_porsi=..., jumlah_donor=..., jumlah_penerima=...)
-```
-
-Provider harus menghitung porsi dari klaim yang benar-benar diambil, memakai
-waktu pengambilan pada periode inklusif dalam zona waktu kampus, mengecualikan
-pending/batal, dan menghitung donor/penerima unik. Tidak ada data dalam periode
-yang valid berarti tiga angka nol. Sumber belum tersedia harus melempar
-`SumberDataBelumTersedia`, bukan mengembalikan nol. Provider tidak boleh
-memutasi data klaim/donasi. Angka yang lolos validasi disimpan sebagai snapshot.
-
-Model Klaim saat ini menyediakan `status="picked_up"`, `picked_up_at`, `portions`,
-`donor`, dan `recipient`. Integrasi berikutnya perlu memakai field tersebut serta
-menentukan penanganan donor yang sudah dihapus dan rincian per donor.
-Model laporan tidak mengimpor model Klaim sehingga migrasi tidak bergantung padanya.
-Metrik kg, CO2e, dan rincian fakultas belum dibuat tanpa sumber data yang sah.
-
-## Integrasi proyek bersama nanti
-
-Setelah integrasi disetujui, tambahkan satu route
-`path("laporan/", include("laporan.urls"))` ke URL utama dan dependency dari
-`laporan/requirements.txt` ke proses instalasi. App sudah tercantum dalam
-`INSTALLED_APPS`. Terapkan migrasi laporan pada database tujuan dan pasang
-tautan navigasi sesuai kesepakatan desain. Perubahan tersebut tidak dilakukan
-oleh implementasi mandiri ini.
+Batas data sumber tetap berlaku: `recipient` pada Claim menggunakan CASCADE.
+Penghapusan akun penerima dapat menghapus klaim sumber untuk perhitungan
+berikutnya; snapshot laporan yang sudah dibuat tetap tersimpan.
 
 ## Standar penulisan kode
 

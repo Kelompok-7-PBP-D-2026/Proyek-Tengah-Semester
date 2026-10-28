@@ -68,3 +68,17 @@ class FilterLaporanForm(forms.Form):
         required=False,
         choices=[("", "Semua status"), *Laporan.Status.choices],
     )
+
+
+class PeriodeLaporanForm(forms.Form):
+    periode_mulai = forms.DateField()
+    periode_selesai = forms.DateField()
+
+    def clean(self):
+        data = super().clean()
+        start, end = data.get("periode_mulai"), data.get("periode_selesai")
+        if start and end and end < start:
+            self.add_error(
+                "periode_selesai", "Tanggal akhir tidak boleh sebelum tanggal mulai."
+            )
+        return data

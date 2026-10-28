@@ -46,16 +46,39 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td colspan="4">
-            <div class="report-empty">
-              <p>Rincian per donor belum tersedia. Data ini akan ditampilkan setelah integrasi Klaim selesai.</p>
-            </div>
-          </td>
-        </tr>
+        {% for donor in laporan.rincian_donor %}
+          <tr>
+            <td>{{ donor.nama }}</td>
+            <td>{{ donor.jenis }}</td>
+            <td>{{ donor.total_porsi|angka_dampak }}</td>
+            <td>{{ donor.jumlah_penerima|angka_dampak }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="4">
+              <div class="report-empty">
+                {% if laporan.rincian_donor is None %}
+                  <p>Rincian per donor belum tersedia. Hitung dampak untuk mengambil data klaim terbaru.</p>
+                {% else %}
+                  <p>Belum ada klaim yang sudah diambil pada periode ini.</p>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
+  {% if laporan.rincian_donor %}
+    <p class="report-help">
+      Penerima dihitung unik pada setiap donor; total penerima menghitung orang yang sama hanya sekali.
+    </p>
+  {% endif %}
+  {% if laporan.memiliki_donor_dihapus %}
+    <p class="report-help">
+      Klaim dari akun donor yang sudah dihapus tetap masuk dalam total porsi dan penerima, tetapi tidak dihitung sebagai donor unik.
+    </p>
+  {% endif %}
   {% if laporan.status == 'draf' %}
     <p class="report-help report-data-note">
       Draf — Angka dampak belum tersedia. Dokumen yang diunduh ditandai sebagai draf, bukan bukti penyaluran makanan.
@@ -79,6 +102,14 @@
       <dt>Dihitung pada</dt>
       <dd>
         {{ laporan.dihitung_pada|default_if_none:"Belum dihitung" }}
+      </dd>
+      <dt>Klaim yang sudah diambil</dt>
+      <dd>
+        {{ laporan.jumlah_klaim|angka_dampak }}
+      </dd>
+      <dt>Dasar periode</dt>
+      <dd>
+        Waktu pengambilan aktual (WIB), termasuk tanggal mulai dan selesai. Hasil tersimpan sampai dihitung ulang.
       </dd>
     </dl>
     <div class="report-notes">{{ laporan.catatan|default:"Belum ada catatan."|linebreaksbr }}</div>

@@ -12,7 +12,7 @@
 {% block header %}
   <header class="report-header">
     <div class="report-nav-inner">
-      <a href="{% url 'laporan:dashboard' %}" class="report-brand">
+      <a href="{% url 'profil:home' %}" class="report-brand">
         <img src="{% static 'laporan/images/truck.svg' %}"
              alt=""
              width="32"
@@ -22,9 +22,7 @@
         <a class="report-nav-active"
            href="{% url 'laporan:dashboard' %}"
            aria-current="page">Laporan</a>
-        <span class="report-nav-link"
-              aria-disabled="true"
-              title="Modul Venue belum tersedia">Venue</span>
+        <a class="report-nav-link" href="{% url 'venue:daftar' %}">Venue</a>
         {% if user.is_authenticated %}
           <span class="report-role">Admin</span>
           <details class="report-account">
@@ -79,8 +77,10 @@
       <nav aria-label="Akun">
         <h2>Akun</h2>
         <a href="{% url 'laporan:login' %}">Masuk</a>
-        <span aria-disabled="true" title="Pendaftaran belum tersedia">Daftar</span>
-        <span aria-disabled="true" title="Verifikasi donor belum tersedia">Verifikasi donor</span>
+        <a href="{% url 'profil:daftar' %}">Daftar</a>
+        {% if user.is_staff or user.is_superuser %}
+          <a href="{% url 'admin:profil_profildonor_changelist' %}">Verifikasi donor</a>
+        {% endif %}
       </nav>
       <div>
         <h2>Bantuan</h2>

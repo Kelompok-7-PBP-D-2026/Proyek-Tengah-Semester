@@ -27,7 +27,10 @@
       Total dihitung otomatis dari klaim yang sudah diambil pada periode terpilih.
     </p>
   {% endif %}
-  <form method="post" class="report-panel report-form" id="report-form">
+  <form method="post"
+        class="report-panel report-form"
+        id="report-form"
+        {% if not editing and sumber_terhubung %}data-preview-url="{% url 'laporan:pratinjau' %}"{% endif %}>
     {% csrf_token %}{{ form.non_field_errors }}
     {% include "laporan/partials/field.html" with field=form.judul %}
     <div class="report-field-row">
@@ -36,13 +39,35 @@
     </div>
     {% if editing %}
       {% include "laporan/partials/field.html" with field=form.catatan %}
-      <p class="report-warning">Periode berubah: hasil lama dihapus dan laporan kembali menjadi draf.</p>
+      <p class="report-warning">Mengubah periode akan menghitung ulang semua total dari data klaim.</p>
     {% else %}
       <h2>Pratinjau agregasi</h2>
-      {% include "laporan/partials/stats.html" with tinted=True impact=preview_impact %}
-      <p class="report-help">
-        Data Klaim belum tersedia untuk pratinjau. Laporan disimpan sebagai draf; angka dampak tidak diisi manual.
+      <div data-preview-stats>
+        {% include "laporan/partials/stats.html" with tinted=True impact=preview_impact %}
+      </div>
+      <p class="report-help"
+         data-preview-message
+         role="status"
+         aria-live="polite">
+        {% if preview_impact %}
+          Angka diambil dari {{ preview_impact.jumlah_klaim|angka_dampak }} klaim berstatus sudah diambil pada periode ini (WIB).
+        {% elif sumber_terhubung %}
+          Pilih periode yang valid untuk melihat pratinjau. Jika data belum tersedia, coba lagi.
+        {% else %}
+          Data Klaim belum terhubung. Laporan disimpan sebagai draf; angka dampak tidak diisi manual.
+        {% endif %}
       </p>
+      {% if sumber_terhubung %}
+        <button type="button"
+                class="report-link"
+                data-preview-retry
+                {% if preview_impact %}hidden{% endif %}>Coba lagi</button>
+        <noscript>
+          <p class="report-help">
+            Pratinjau awal menggunakan periode di atas. Saat laporan dibuat, angka dihitung ulang sesuai tanggal yang Anda kirim.
+          </p>
+        </noscript>
+      {% endif %}
     {% endif %}
     <div class="report-form-actions">
       <a class="report-button outline"

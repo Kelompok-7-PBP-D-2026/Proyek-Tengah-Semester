@@ -12,11 +12,11 @@
             <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
                 {% if user.is_authenticated %}
                     {% with ns=request.resolver_match.namespace %}
-                    {% if user.is_staff %}
+                    {% if user.is_staff or user.is_superuser %}
                     {# Varian Admin (figma-export/Navbar/Admin.png) #}
                     <li class="nav-item"><a class="btn btn-mbg-green btn-sm px-3" href="{% url 'admin:profil_profildonor_changelist' %}">Verifikasi</a></li>
                     <li class="nav-item"><a class="{% if ns == 'venue' %}btn btn-mbg-green btn-sm px-3 rounded-pill{% else %}nav-link text-forest{% endif %}" href="{% url 'venue:daftar' %}">Venue</a></li>
-                    <li class="nav-item"><a class="nav-link text-forest" href="#">Laporan</a></li>
+                    <li class="nav-item"><a class="nav-link text-forest" href="{% url 'laporan:dashboard' %}">Laporan</a></li>
                     <li class="nav-item"><span class="chip text-sunshine">Admin</span></li>
                     {% elif user.profil_donor %}
                     {# Varian Donor: Klaim masuk, Donasi saya. Menu aktif tampil sebagai pil hijau. #}

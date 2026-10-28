@@ -3,17 +3,20 @@ from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.views import LoginView, LogoutView
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.db.models import Count, Q
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .exports import PDFDependencyMissing, buat_csv, buat_pdf
-from .forms import AdminLoginForm, FilterLaporanForm, LaporanForm
+from .forms import AdminLoginForm, FilterLaporanForm, LaporanForm, PeriodeLaporanForm
+from .klaim_adapter import REPORT_TIME_ZONE
 from .models import Laporan
 from .permissions import admin_required
 from .services import (
@@ -24,6 +27,14 @@ from .services import (
 )
 
 logger = logging.getLogger(__name__)
+AGGREGATION_ERRORS = (
+    SumberDataBelumTersedia,
+    ImportError,
+    ValueError,
+    TypeError,
+    ValidationError,
+    DatabaseError,
+)
 
 
 class AdminLoginView(LoginView):
@@ -43,12 +54,12 @@ def _detail_context(laporan):
 @admin_required
 @require_http_methods(["GET"])
 def dashboard_laporan(request):
-    year = timezone.localdate().year
+    year = timezone.localdate(timezone=REPORT_TIME_ZONE).year
     annual_impact = None
     if sumber_terhubung():
         try:
             annual_impact = ringkasan_periode(date(year, 1, 1), date(year, 12, 31))
-        except (SumberDataBelumTersedia, ImportError, ValueError, TypeError):
+        except AGGREGATION_ERRORS:
             logger.warning("Ringkasan dampak tahunan belum tersedia", exc_info=True)
     laporan = Laporan.objects.select_related("dibuat_oleh")
     stats = laporan.aggregate(
@@ -85,7 +96,7 @@ def dashboard_laporan(request):
 @admin_required
 @require_http_methods(["GET", "POST"])
 def buat_laporan(request):
-    today = timezone.localdate()
+    today = timezone.localdate(timezone=REPORT_TIME_ZONE)
     form = LaporanForm(
         request.POST if request.method == "POST" else None,
         initial={
@@ -96,15 +107,71 @@ def buat_laporan(request):
     if request.method == "POST" and form.is_valid():
         laporan = form.save(commit=False)
         laporan.dibuat_oleh = request.user
-        laporan.save()
-        messages.success(
-            request, "Draf laporan berhasil dibuat. Angka dampak belum dihitung."
-        )
-        return redirect(laporan)
+        try:
+            with transaction.atomic():
+                if sumber_terhubung():
+                    hitung_laporan(laporan)
+                else:
+                    laporan.save()
+        except AGGREGATION_ERRORS:
+            logger.exception("Pembuatan laporan belum berhasil")
+            form.add_error(
+                None,
+                "Data klaim belum dapat dihitung. Laporan belum disimpan; silakan coba lagi.",
+            )
+        else:
+            messages.success(
+                request,
+                "Laporan berhasil dibuat dan dihitung."
+                if sumber_terhubung()
+                else "Draf laporan berhasil dibuat. Angka dampak belum dihitung.",
+            )
+            return redirect(laporan)
+    period = PeriodeLaporanForm(
+        {
+            "periode_mulai": form["periode_mulai"].value(),
+            "periode_selesai": form["periode_selesai"].value(),
+        }
+    )
+    preview = None
+    if sumber_terhubung() and period.is_valid():
+        try:
+            preview = ringkasan_periode(**period.cleaned_data)
+        except AGGREGATION_ERRORS:
+            logger.warning("Pratinjau awal belum tersedia", exc_info=True)
     return render(
         request,
         "laporan/form.html",
-        {"form": form, "editing": False, "sumber_terhubung": sumber_terhubung()},
+        {
+            "form": form,
+            "editing": False,
+            "sumber_terhubung": sumber_terhubung(),
+            "preview_impact": preview,
+        },
+    )
+
+
+@admin_required
+@require_http_methods(["GET"])
+@never_cache
+def pratinjau_laporan(request):
+    form = PeriodeLaporanForm(request.GET)
+    if not form.is_valid():
+        return JsonResponse({"errors": form.errors.get_json_data()}, status=400)
+    try:
+        result = ringkasan_periode(**form.cleaned_data)
+    except AGGREGATION_ERRORS:
+        logger.warning("Pratinjau laporan belum tersedia", exc_info=True)
+        return JsonResponse(
+            {"error": "Pratinjau belum tersedia. Silakan coba lagi."}, status=503
+        )
+    return JsonResponse(
+        {
+            "total_porsi": result.total_porsi,
+            "jumlah_donor": result.jumlah_donor,
+            "jumlah_penerima": result.jumlah_penerima,
+            "jumlah_klaim": result.jumlah_klaim,
+        }
     )
 
 
@@ -127,31 +194,34 @@ def edit_laporan(request, pk):
         if request.method == "POST" and form.is_valid():
             laporan = form.save(commit=False)
             changed = old_period != (laporan.periode_mulai, laporan.periode_selesai)
-            if changed:
-                laporan.reset_hasil()
-            laporan.save()
-            recalculated = False
-            if request.POST.get("action") == "recalculate":
-                try:
-                    with transaction.atomic():
+            recalculate = changed or request.POST.get("action") == "recalculate"
+            try:
+                with transaction.atomic():
+                    if recalculate and sumber_terhubung():
                         hitung_laporan(laporan)
-                    recalculated = True
-                except SumberDataBelumTersedia as exc:
-                    messages.warning(request, str(exc))
-                except (ImportError, ValueError, TypeError):
-                    logger.exception("Perhitungan ulang laporan belum berhasil")
-                    messages.error(
-                        request,
-                        "Perubahan tersimpan, tetapi perhitungan ulang belum berhasil.",
-                    )
-            if recalculated:
-                success_message = "Laporan diperbarui dan dihitung ulang."
+                    else:
+                        if changed:
+                            laporan.reset_hasil()
+                        laporan.save()
+            except AGGREGATION_ERRORS:
+                logger.exception("Pembaruan laporan belum berhasil")
+                form.add_error(
+                    None,
+                    "Perhitungan belum berhasil. Perubahan belum disimpan dan hasil sebelumnya tetap tersimpan.",
+                )
             else:
-                success_message = "Laporan diperbarui."
-                if changed:
-                    success_message += " Periode berubah; hasil sebelumnya dihapus dan perlu dihitung ulang."
-            messages.success(request, success_message)
-            return redirect(laporan)
+                if recalculate and not sumber_terhubung():
+                    messages.warning(
+                        request,
+                        "Data Klaim belum terhubung. Hasil periode baru belum tersedia.",
+                    )
+                messages.success(
+                    request,
+                    "Laporan diperbarui dan dihitung ulang."
+                    if recalculate and sumber_terhubung()
+                    else "Laporan diperbarui.",
+                )
+                return redirect(laporan)
     return render(
         request,
         "laporan/form.html",
@@ -188,7 +258,7 @@ def hitung_ulang_laporan(request, pk):
             hitung_laporan(laporan)
     except SumberDataBelumTersedia as exc:
         messages.warning(request, str(exc))
-    except (ImportError, ValueError, TypeError) as exc:
+    except AGGREGATION_ERRORS as exc:
         logger.exception("Konfigurasi agregasi laporan tidak valid", exc_info=exc)
         messages.error(
             request, "Perhitungan belum berhasil. Hasil sebelumnya tetap tersimpan."

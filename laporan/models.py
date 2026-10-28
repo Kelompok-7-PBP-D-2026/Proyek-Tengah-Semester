@@ -22,6 +22,8 @@ class Laporan(models.Model):
     total_porsi = models.PositiveBigIntegerField(null=True, blank=True)
     jumlah_donor = models.PositiveBigIntegerField(null=True, blank=True)
     jumlah_penerima = models.PositiveBigIntegerField(null=True, blank=True)
+    jumlah_klaim = models.PositiveBigIntegerField(null=True, blank=True)
+    rincian_donor = models.JSONField(null=True, blank=True)
     dihitung_pada = models.DateTimeField(null=True, blank=True)
     dibuat_pada = models.DateTimeField(auto_now_add=True)
     diperbarui_pada = models.DateTimeField(auto_now=True)
@@ -79,3 +81,8 @@ class Laporan(models.Model):
         self.status = self.Status.DRAF
         self.total_porsi = self.jumlah_donor = self.jumlah_penerima = None
         self.dihitung_pada = None
+        self.jumlah_klaim = self.rincian_donor = None
+
+    @property
+    def memiliki_donor_dihapus(self):
+        return any(row["donor_id"] is None for row in (self.rincian_donor or []))

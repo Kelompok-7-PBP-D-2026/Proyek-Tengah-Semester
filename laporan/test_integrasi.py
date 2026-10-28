@@ -7,8 +7,10 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
+from donasi.models import Donasi
 from klaim.models import Claim, ClaimStatus
-from profil.models import ProfilDonor
+from profil.models import ProfilDonor, ProfilPenerima
+from venue.models import Venue
 
 from .exports import buat_csv, buat_pdf
 from .klaim_adapter import REPORT_TIME_ZONE, agregasi
@@ -103,6 +105,98 @@ class IntegrasiLaporanTests(TestCase):
             },
         )
         self.assertEqual(result.rincian_donor[1]["jenis"], "Belum diklasifikasikan")
+
+    @patch("django.utils.timezone.now")
+    def test_verified_pickup_flows_from_donation_into_report_exports(self, mock_now):
+        mock_now.return_value = self.picked_up
+        venue = Venue.objects.create(
+            nama="Lobi Fasilkom",
+            fakultas="fasilkom",
+            latitude="-6.364000",
+            longitude="106.828000",
+        )
+        ProfilPenerima.objects.create(
+            user=self.recipient,
+            nama_lengkap="Penerima Uji",
+            nim="2600000001",
+            fakultas="fasilkom",
+            kontak="penerima@example.test",
+            terverifikasi=True,
+        )
+        self.client.force_login(self.donor)
+        response = self.client.post(
+            reverse("donasi:buat"),
+            {
+                "nama": "Nasi untuk laporan",
+                "jumlah_porsi": 10,
+                "lokasi": venue.nama,
+                "waktu_tersedia": (self.picked_up - timedelta(minutes=30)).strftime(
+                    "%Y-%m-%dT%H:%M"
+                ),
+                "waktu_akhir_pengambilan": (
+                    self.picked_up + timedelta(hours=2)
+                ).strftime("%Y-%m-%dT%H:%M"),
+            },
+        )
+        donation = Donasi.objects.get()
+        self.assertRedirects(response, donation.get_absolute_url())
+
+        self.client.force_login(self.recipient)
+        claim_url = reverse("klaim:claim_create", args=[donation.pk])
+        response = self.client.get(claim_url)
+        slot = response.context["form"].fields["pickup_time"].choices[0][0]
+        response = self.client.post(claim_url, {"portions": 2, "pickup_time": slot})
+        claim = Claim.objects.get()
+        self.assertRedirects(response, reverse("klaim:claim_detail", args=[claim.pk]))
+        self.assertEqual(claim.status, ClaimStatus.PENDING)
+        donation.refresh_from_db()
+        self.assertEqual(donation.jumlah_porsi, 8)
+
+        self.client.force_login(self.staff)
+        preview = self.client.get(reverse("laporan:pratinjau"), self.form_data()).json()
+        self.assertEqual(preview["total_porsi"], 0)
+        self.client.force_login(self.donor)
+        verify_url = reverse("klaim:claim_verify_code", args=[claim.pk])
+        response = self.client.post(
+            verify_url,
+            {"pickup_code": "SALAH"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+        response = self.client.post(
+            verify_url,
+            {"pickup_code": claim.pickup_code},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertTrue(response.json()["ok"])
+        claim.refresh_from_db()
+        self.assertEqual(claim.status, ClaimStatus.PICKED_UP)
+        self.assertEqual(claim.picked_up_at, self.picked_up)
+
+        self.client.force_login(self.staff)
+        response = self.client.post(reverse("laporan:buat"), self.form_data())
+        report = Laporan.objects.latest("pk")
+        self.assertRedirects(response, report.get_absolute_url())
+        self.assertEqual(
+            (
+                report.total_porsi,
+                report.jumlah_donor,
+                report.jumlah_penerima,
+                report.jumlah_klaim,
+            ),
+            (2, 1, 1, 1),
+        )
+        self.assertEqual(report.rincian_donor[0]["nama"], self.profile.nama_unit)
+        response = self.client.get(reverse("laporan:ekspor_csv", args=[report.pk]))
+        rows = list(csv.reader(StringIO(response.content.decode("utf-8-sig"))))
+        self.assertIn(["Total makanan tersalurkan (porsi)", "2"], rows)
+        self.assertIn(["Kantin A", "Kantin Kampus", "2", "1"], rows)
+        response = self.client.get(reverse("laporan:ekspor_pdf", args=[report.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.content.startswith(b"%PDF-"))
+        donation.refresh_from_db()
+        self.assertEqual(donation.jumlah_porsi, 8)
 
     def test_uses_actual_pickup_time_and_inclusive_wib_boundaries(self):
         start = datetime(2026, 10, 1, tzinfo=REPORT_TIME_ZONE)

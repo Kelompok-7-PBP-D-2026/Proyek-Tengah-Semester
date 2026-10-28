@@ -1,81 +1,62 @@
 # Modul 5 — Laporan Dampak
 
-## Integrasi dan acuan desain
+Modul ini membantu admin membuat laporan penyaluran makanan dari data klaim.
+Tampilan mengacu ke [Figma Modul 5](https://www.figma.com/design/MT2ZypZ7HGnSp8RB2AaWKt/Untitled?node-id=101-91).
 
-Modul tersedia langsung di `/laporan/` melalui konfigurasi utama aplikasi.
-Menu Laporan pada navigasi admin dan footer terhubung ke dashboard; logo MBG
-kembali ke beranda, dan tautan Venue, Daftar, serta Verifikasi memakai URL aplikasi.
+## Menjalankan
 
-Tampilan mengikuti file Figma `MT2ZypZ7HGnSp8RB2AaWKt`: 5A Daftar
-(`102:1589`), 5B Buat (`102:1737`), 5C Detail (`102:1816`), 5D Edit
-(`102:1935`), dan 5E Konfirmasi Hapus (`102:2012`). Warna, font,
-kartu statistik, tabel, logo, dan ukuran konten mengikuti desain desktop;
-layout menyesuaikan ponsel. Angka contoh desain tidak dimasukkan ke database.
-
-## Aturan perhitungan
-
-`LAPORAN_AGGREGATOR = "laporan.klaim_adapter.agregasi"` aktif secara default.
-Provider membaca `klaim.Claim` tanpa mengubah klaim atau stok donasi:
-
-- Hanya `status="picked_up"` dengan `picked_up_at` terisi yang dihitung.
-- Periode memakai waktu pengambilan aktual dalam **Asia/Jakarta (WIB)**,
-  mulai pukul 00:00:00 sampai 23:59:59.999999 pada tanggal akhir, inklusif.
-  Waktu reservasi, pembuatan klaim, dan batas ambil bukan dasar periode.
-- Porsi adalah jumlah `portions`; donor dan penerima dihitung dari ID akun unik.
-  Orang yang menerima dari beberapa donor tetap dihitung satu kali pada total.
-- Rincian donor berisi nama unit, jenis donor, porsi, serta penerima unik per donor.
-  Akun tanpa profil memakai nama pada klaim atau username dan jenis belum
-  diklasifikasikan. Akun berbeda dengan nama sama tetap donor berbeda.
-- Klaim dengan donor yang dihapus digabung dalam baris "Donor dihapus".
-  Porsi dan penerima tetap dihitung; identitas yang hilang tidak direka ulang
-  dan tidak ditambahkan ke jumlah donor unik. Catatan ini muncul pada detail/ekspor.
-- Periode tanpa klaim menghasilkan nol. Sumber gagal dihitung menampilkan
-  kesalahan, bukan angka nol palsu.
-
-Dashboard menghitung satu periode tahunan langsung dari klaim, bukan
-menjumlahkan laporan yang mungkin memiliki periode tumpang tindih.
-
-## Alur laporan
-
-1. Admin aktif (`is_staff` atau `is_superuser`) memilih tanggal pada Buat Laporan.
-   Judul kosong otomatis memakai periode. Pratinjau diperbarui lewat GET JSON
-   `/laporan/pratinjau/`, tanpa menyimpan laporan. Tampilan awal tersedia tanpa JS.
-2. Buat laporan menghitung ulang di server dan menyimpan total, jumlah klaim,
-   rincian donor, pembuat, dan waktu perhitungan sebagai satu snapshot.
-   Angka atau pembuat yang dikirim klien diabaikan.
-3. Detail, CSV, dan PDF membaca snapshot yang sama. Perubahan sumber/profil
-   setelahnya tidak diam-diam mengubah laporan tersimpan.
-4. Perubahan tanggal atau tombol Hitung ulang menghitung snapshot baru.
-   Perubahan judul/catatan saja mempertahankan snapshot. Kegagalan hitung
-   membatalkan perubahan sehingga periode dan hasil lama tetap konsisten.
-5. Hapus membutuhkan konfirmasi dan POST ber-CSRF. Escape membatalkan dialog.
-
-Migrasi `0002` menambahkan kolom nullable tanpa mengubah laporan lama.
-Laporan lama tanpa rincian tetap bisa dibuka/diekspor; tekan **Hitung dampak**
-untuk mengisi rincian dari sumber terkini. Jika provider sengaja dinonaktifkan,
-mode draf tetap tersedia, dengan angka belum tersedia (berbeda dari nol).
-
-CSV melindungi teks dari formula injection; PDF/HTML meng-escape teks pengguna.
-Ekspor menyertakan rincian donor dan catatan, dengan tabel PDF berulang judul
-kolom saat melewati satu halaman. Tidak ada klaim kg/CO2e tanpa sumber data.
-
-## Menjalankan aplikasi (PowerShell)
-
-Dari folder utama proyek dengan virtual environment aktif:
+Dari folder yang berisi `manage.py`, dengan virtual environment aktif:
 
 ```powershell
 python -m pip install -r requirements.txt
 python manage.py migrate
-python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Gunakan akun admin yang sudah ada jika tersedia; `createsuperuser` hanya
-perlu untuk membuat akun admin baru. Buka `http://127.0.0.1:8000/laporan/`.
-Dependency PDF otomatis terpasang melalui requirements utama.
+Buka `http://127.0.0.1:8000/laporan/` dan masuk dengan akun admin aktif
+(`is_staff` atau `is_superuser`). Jika belum ada, buat akun dengan
+`python manage.py createsuperuser`.
 
-Modul memakai settings, URL, database, dan dependency utama proyek, sama seperti
-modul donasi dan klaim. Tidak diperlukan settings atau database tambahan.
+Modul memakai settings, database, dan dependency utama proyek.
+
+## Fitur utama
+
+- Daftar laporan dengan pencarian, filter status, dan pagination.
+- Buat laporan berdasarkan periode, dengan judul otomatis jika dikosongkan.
+- Pratinjau total porsi, donor, dan penerima sebelum laporan disimpan.
+- Detail laporan dengan rincian per donor dan catatan.
+- Edit, hitung ulang, dan hapus laporan melalui konfirmasi.
+- Unduh CSV atau PDF berisi hasil yang sama dengan detail laporan.
+
+## Aturan perhitungan
+
+- Sumbernya `klaim.Claim` berstatus `picked_up` dengan `picked_up_at` terisi.
+  Periode mengikuti waktu pengambilan aktual dalam **WIB**, termasuk seluruh
+  tanggal mulai dan selesai. Stok donasi tidak dipakai sebagai angka penyaluran.
+- Total porsi dijumlahkan dari `portions`. Donor dan penerima dihitung berdasarkan
+  akun unik; penerima yang mengambil dari beberapa donor tetap dihitung sekali
+  pada total laporan. Rincian menghitung penerima unik untuk masing-masing donor.
+- Dashboard menghitung dampak tahunan langsung dari klaim, sehingga laporan
+  dengan periode tumpang tindih tidak membuat angka terhitung dua kali.
+- Periode tanpa klaim menghasilkan **0**. Data belum tersedia ditampilkan **—**;
+  kegagalan perhitungan tidak dianggap nol. Mode draf tersedia jika sumber
+  sengaja dinonaktifkan melalui `LAPORAN_AGGREGATOR`.
+- Hasil disimpan sebagai **snapshot** (salinan hasil saat dihitung). Perubahan
+  sumber tidak otomatis mengubah laporan. Mengubah periode atau menekan tombol
+  hitung memperbarui hasil; mengubah judul/catatan saja mempertahankannya.
+  Jika perhitungan gagal, perubahan tidak disimpan dan hasil lama tetap aman.
+- Klaim dari donor yang dihapus tetap masuk total porsi dan penerima, tetapi
+  tidak dihitung sebagai donor unik. Penghapusan akun penerima dapat menghapus
+  klaim sumber; laporan yang sudah tersimpan tetap utuh.
+
+Untuk laporan lama yang belum memiliki rincian donor, klik **Hitung dampak**.
+
+## Struktur penting
+
+- `models.py`, `forms.py`, `views.py`, `urls.py`: data, formulir, dan halaman laporan.
+- `klaim_adapter.py`, `services.py`: membaca Claim, menghitung, dan menyimpan hasil.
+- `exports.py`, `permissions.py`: ekspor file dan pembatasan akses admin.
+- `templates/`, `static/`, `templatetags/`: tampilan dan format angka/tanggal.
 
 ## Pengujian
 
@@ -85,26 +66,6 @@ python manage.py check
 python manage.py makemigrations --check --dry-run
 ```
 
-`tests.py` mempertahankan pengujian CRUD, otorisasi, CSRF, mode draf, dan ekspor.
-`test_integrasi.py` menguji model Claim nyata, batas WIB, keunikan akun,
-snapshot, pratinjau, rollback, rincian donor, navigasi utama, dan ekspor.
-Tests memakai database sementara; provider palsu hanya untuk pengujian.
-
-Batas data sumber tetap berlaku: `recipient` pada Claim menggunakan CASCADE.
-Penghapusan akun penerima dapat menghapus klaim sumber untuk perhitungan
-berikutnya; snapshot laporan yang sudah dibuat tetap tersimpan.
-
-## Struktur kode
-
-- `models.py`, `forms.py`, `views.py`, `urls.py`: model, formulir, dan alur halaman.
-- `services.py`: validasi dan penyimpanan hasil perhitungan laporan.
-- `klaim_adapter.py`: agregasi data Claim sesuai periode.
-- `exports.py`: ekspor CSV dan PDF dari snapshot yang tersimpan.
-- `permissions.py`: pembatasan akses pengelola.
-- `tests.py`, `test_integrasi.py`: pengujian fitur dan integrasi Claim.
-- `migrations/`, `templates/`, `static/`, `templatetags/`: skema database dan tampilan.
-
-Nama kelas memakai PascalCase, fungsi memakai snake_case, dan nama domain
-mengikuti istilah Indonesia yang digunakan proyek. Gunakan indentasi empat
-spasi untuk Python dan dua spasi untuk HTML/CSS/JS. Dependency dipasang melalui
-`requirements.txt` utama; tidak ada konfigurasi formatter khusus modul.
+Tes laporan ada di `tests.py` dan `test_integrasi.py`, meliputi CRUD, hak akses,
+CSRF, perhitungan Claim, pratinjau, snapshot, serta ekspor CSV/PDF.
+Pengujian memakai database sementara.

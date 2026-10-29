@@ -1,0 +1,77 @@
+{% load laporan_format %}
+
+<div class="report-table-wrap"
+     tabindex="0"
+     role="region"
+     aria-label="Daftar laporan, geser untuk melihat seluruh kolom">
+  <table class="report-table">
+    <caption class="report-sr-only">Daftar laporan dampak</caption><colgroup>
+      <col>
+      <col class="col-portions">
+      <col class="col-donor">
+      <col class="col-recipient">
+      <col class="col-created">
+      <col class="col-actions">
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">Periode</th>
+        <th scope="col">Total porsi</th>
+        <th scope="col">Donor</th>
+        <th scope="col">Penerima</th>
+        <th scope="col">Dibuat</th>
+        <th scope="col">Aksi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in reports %}
+        <tr>
+          <td>
+            <a class="report-period-link"
+               href="{{ item.get_absolute_url }}"
+               title="{{ item.judul }}">{{ item|periode_laporan }}</a>
+            {% if item.status == 'draf' %}<small>Draf · belum dihitung</small>{% endif %}
+          </td>
+          <td>{{ item.total_porsi|angka_dampak }}</td>
+          <td>{{ item.jumlah_donor|angka_dampak }}</td>
+          <td>{{ item.jumlah_penerima|angka_dampak }}</td>
+          <td>{{ item.dibuat_pada|tanggal_id }}</td>
+          <td>
+            <div class="report-row-actions">
+              <a class="report-button outline small"
+                 href="{{ item.get_absolute_url }}"
+                 aria-label="Lihat {{ item.judul }}">Lihat</a>
+              <a class="report-button gold small"
+                 href="{% url 'laporan:ekspor_pdf' item.pk %}"
+                 aria-label="Unduh PDF {{ item.judul }}">Unduh PDF</a>
+              <a class="report-button outline small"
+                 href="{% url 'laporan:edit' item.pk %}"
+                 aria-label="Edit {{ item.judul }}">Edit</a>
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="report-empty">
+              <h2>
+                {% if request.GET %}
+                  Tidak ada laporan yang cocok
+                {% else %}
+                  Belum ada laporan tersimpan
+                {% endif %}
+              </h2>
+              <p>
+                {% if request.GET %}
+                  Coba ubah pencarian atau status laporan.
+                {% else %}
+                  Buat laporan pertama dengan memilih periode. Laporan dapat disimpan sebagai draf.
+                {% endif %}
+              </p>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

@@ -1,7 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
+from donasi.models import Donasi
+from klaim.models import Claim, ClaimStatus
 
 from .forms import (
     DaftarDonorForm,
@@ -11,30 +16,27 @@ from .forms import (
 )
 from .models import JenisDonor, ProfilDonor, ProfilPenerima
 
-MODUL_LIST = [
-    {"nama": "Profil Pengguna", "pic": "Fikri"},
-    {"nama": "Donasi Makanan", "pic": "Rindu"},
-    {"nama": "Klaim dan Reservasi", "pic": "Kireina"},
-    {"nama": "Venue dan Lokasi", "pic": "Marvin"},
-    {"nama": "Laporan Dampak", "pic": "Joshua"},
-]
-
-# Angka dampak contoh — nanti diganti agregasi asli dari modul laporan (Joshua).
-DAMPAK_LIST = [
-    {"angka": "1.240", "label": "porsi terselamatkan semester ini"},
-    {"angka": "86", "label": "acara kampus ikut berdonasi"},
-    {"angka": "480 kg", "label": "sampah makanan dicegah"},
-]
-
-
 def home(request):
-    """Halaman utama sementara: design system MBG dari Figma sudah ke-pakai di sini.
-    Konten donasi menyusul dari modul Rindu (app donasi)."""
-    return render(request, "home.html", {
-        "modul_list": MODUL_LIST,
-        "dampak": DAMPAK_LIST,
-        "makanan": [],
-    })
+    """Landing page dengan donasi tersedia dan dampak yang dihitung dari database."""
+    # Hanya tampilkan tiga donasi terbaru yang masih bisa diklaim.
+    makanan_tersedia = Donasi.objects.filter(
+        jumlah_porsi__gt=0,
+        waktu_akhir_pengambilan__gt=timezone.now(),
+    ).select_related("donor")[:3]
+
+    # Porsi dianggap terselamatkan setelah klaim benar-benar selesai diambil.
+    total_porsi_diselamatkan = (
+        Claim.objects.filter(status=ClaimStatus.PICKED_UP)
+        .aggregate(total=Sum("portions"))["total"]
+        or 0
+    )
+
+    context = {
+        "makanan_tersedia": makanan_tersedia,
+        "total_porsi_diselamatkan": total_porsi_diselamatkan,
+        "total_donasi": Donasi.objects.count(),
+    }
+    return render(request, "home.html", context)
 
 
 def daftar(request):

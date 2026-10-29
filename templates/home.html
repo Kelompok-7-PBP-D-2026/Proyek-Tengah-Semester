@@ -204,9 +204,10 @@
                         <div class="landing-food-card__media{% if not item.foto %} landing-food-card__media--fallback{% endif %}">
                             {% if item.foto %}
                                 <img
-                                    src="{{ item.foto.url }}"
+                                    src="{% url 'donasi:foto' item.pk %}"
                                     alt="Foto {{ item.nama }}"
                                     data-donation-photo
+                                    onerror="this.hidden = true"
                                 >
                             {% else %}
                                 <img src="{% static 'images/landing/food-card.svg' %}" alt="" aria-hidden="true">

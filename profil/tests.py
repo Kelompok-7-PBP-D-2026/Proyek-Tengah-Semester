@@ -19,6 +19,7 @@ class HomeViewTest(TestCase):
     def test_home_uses_base_template(self):
         response = self.client.get("/")
         self.assertTemplateUsed(response, "base.html")
+        self.assertContains(response, "Makanan Berlebih Gratis")
 
     def test_home_menampilkan_tiga_donasi_yang_masih_tersedia(self):
         donor = User.objects.create_user("donor_landing", password="rahasia-123")

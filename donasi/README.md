@@ -1,6 +1,6 @@
 # Modul Donasi Makanan — Rindu Maharani Nadhirah
 
-Modul donasi MBG dibuat dengan Django MVT, Bootstrap 5, dan JavaScript `fetch`.
+Modul donasi MBG dibuat dengan Django MVT, Bootstrap 5, HTMX, dan JavaScript `fetch`.
 Desain mengacu ke [Figma Modul 2](https://www.figma.com/design/MT2ZypZ7HGnSp8RB2AaWKt/Untitled?node-id=94-90).
 
 ## Menjalankan
@@ -23,8 +23,8 @@ modul profil; tidak perlu membuat superuser khusus untuk memakai modul donasi.
 - Donor yang login dapat membuat, mengedit, dan menghapus donasinya sendiri.
 - Form HTML tetap berfungsi tanpa JavaScript. Dengan JavaScript, simpan dan hapus
   memakai `fetch`, `FormData`, CSRF token, respons JSON, dan toast.
-- Pencarian nama, filter lokasi, status, waktu, dan **Donasi saya** diperbarui
-  tanpa memuat ulang seluruh halaman.
+- Pencarian, filter, dan pagination memakai HTMX untuk mengganti partial kartu tanpa
+  memuat ulang seluruh halaman. Form dan link biasa tetap menjadi fallback.
 - Daftar memakai pagination sebanyak 6 donasi per halaman.
 - Identitas donor tidak dikirim dalam JSON kepada pengguna anonim.
 - Foto bersifat opsional, hanya JPG/PNG, dan maksimal 5 MB.
@@ -95,6 +95,6 @@ python -m coverage report -m --omit="donasi/test*.py,donasi/migrations/*,donasi/
 node --check donasi/static/donasi/donasi.js
 ```
 
-Saat audit terakhir, 19 tes donasi dan 77 tes seluruh proyek lulus. Coverage kode
-Python inti app donasi adalah 86%. Tes sengaja memakai pola dasar `TestCase`,
+Saat audit terakhir, 25 tes donasi dan 83 tes seluruh proyek lulus. Coverage kode
+Python inti app donasi adalah 93%. Tes sengaja memakai pola dasar `TestCase`,
 `self.client`, `reverse`, dan assertion Django agar mudah dipahami untuk live coding.

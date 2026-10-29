@@ -269,6 +269,31 @@ class DonasiTests(TestCase):
         self.assertEqual(response.context["page_obj"].number, 2)
         self.assertEqual(len(response.context["page_obj"]), 2)
 
+    # ===== Interaktivitas HTMX pada daftar Donasi =====
+
+    def test_htmx_filter_returns_only_results_partial(self):
+        """Request HTMX cukup menerima kartu hasil, bukan seluruh halaman daftar."""
+        response = self.client.get(
+            reverse("donasi:daftar"),
+            {"q": "Nasi"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "donasi/partials/results.html")
+        self.assertTemplateNotUsed(response, "donasi/daftar.html")
+        self.assertContains(response, self.item.nama)
+
+    def test_list_has_htmx_filter_and_pagination_controls(self):
+        """Form filter dan link halaman harus memperbarui wadah hasil yang sama."""
+        for number in range(7):
+            self.create_donation(nama=f"Donasi HTMX {number}")
+
+        response = self.client.get(reverse("donasi:daftar"))
+
+        self.assertContains(response, 'hx-target="#donation-results"', count=4)
+        self.assertContains(response, 'hx-push-url="true"', count=4)
+
     def test_json_hides_donor_from_anonymous_users(self):
         response = self.client.get(
             self.item.get_absolute_url(),

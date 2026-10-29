@@ -1,9 +1,4 @@
-"""Single adapter between the klaim app and the donation and profile modules.
 
-Everything that touches the donation model (donasi) or the user profiles (profil),
-both owned by other team members, lives in this file. Field names below were
-verified against donasi/models.py and profil/models.py.
-"""
 import logging
 from dataclasses import dataclass
 from datetime import timedelta
@@ -19,25 +14,16 @@ from .utils import ensure_aware, next_slot_start
 
 logger = logging.getLogger(__name__)
 
-# ---- donation module (donasi) ---------------------------------------------
 
-# "app_label.ModelName" of the donation model.
 DONATION_MODEL = "donasi.Donasi"
 
-# Maps our keys to attribute paths on the donation model.
-# Dotted paths (e.g. "donor.profil_donor.nama_unit") and zero-argument
-# callables/properties work, except "available_portions", which must be a plain
-# model field (it is written to). A path that cannot be resolved is treated as
-# missing, and optional keys then fall back to a default.
 FIELD_MAP = {
     "id": "pk",
     "food_name": "nama",
-    # Organisation name from the donor's profile; falls back to the owner's name.
     "donor_name": "donor.profil_donor.nama_unit",
     "pickup_location": "lokasi",
     "pickup_start": "waktu_tersedia",
     "pickup_deadline": "waktu_akhir_pengambilan",
-    # REMAINING stock. Claims subtract from it, cancel/expire add back.
     "available_portions": "jumlah_porsi",
     "owner_id": "donor_id",
     "distance_km": None,
@@ -47,25 +33,18 @@ REQUIRED_FIELDS = (
     "available_portions", "owner_id",
 )
 
-# URL names in the donation app.
-DONATION_DETAIL_URL_NAME = "donasi:detail"  # takes pk
+DONATION_DETAIL_URL_NAME = "donasi:detail" 
 DONATION_LIST_URL_NAME = "donasi:daftar"
 
-# Demo mode (DEBUG only, when the donation model is not installed).
 DEMO_DONOR_USERNAME = "demo_donor"
 
-# ---- profile module (profil) ----------------------------------------------
-
-# Reverse OneToOne names defined in profil/models.py.
 DONOR_PROFILE_ATTR = "profil_donor"
 RECIPIENT_PROFILE_ATTR = "profil_penerima"
 PROFILE_URL_NAME = "profil:profil_saya"
 
-# Set to True to require admin verification ("terverifikasi") before acting.
 REQUIRE_VERIFIED_DONOR = False
 REQUIRE_VERIFIED_RECIPIENT = False
 
-# Donors see a masked NIM like "2506 xxxx". Set to None to show the full NIM.
 NIM_VISIBLE_DIGITS = 4
 
 _MISSING = object()
@@ -85,8 +64,6 @@ class DonationInfo:
     pickup_start: object = None
     distance_km: object = None
 
-
-# ---- roles and display names ------------------------------------------------
 
 def _get_profile(user, attr):
     """Return a related profile, or None when the user has none.
@@ -175,8 +152,6 @@ def get_recipient_label(user):
         return name
     return f"{name} ({mask_nim(profile.nim)})"
 
-
-# ---- donation access --------------------------------------------------------
 
 def _get_donation_model():
     """Return the donation model class, or None when it is not installed."""
@@ -309,7 +284,6 @@ def adjust_portions(donation_id, delta):
     model._default_manager.filter(pk=donation_id).update(**{field: F(field) + delta})
 
 
-# ---- URLs -------------------------------------------------------------------
 
 def _safe_reverse(url_name, *args):
     """Reverse a URL name defensively; return None when unavailable."""

@@ -7,5 +7,6 @@ urlpatterns = [
     path("donasi/", include("donasi.urls")),
     path("klaim/", include("klaim.urls")),
     path("venue/", include("venue.urls")),
+    path("laporan/", include("laporan.urls")),
     path("", include("profil.urls")),
 ]

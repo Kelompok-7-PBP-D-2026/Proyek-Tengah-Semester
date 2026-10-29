@@ -1,15 +1,19 @@
 from datetime import timedelta
+from io import BytesIO
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from klaim.models import Claim, ClaimStatus
 from profil.models import Fakultas, JenisDonor, ProfilDonor, ProfilPenerima
 from venue.models import UnitVenue, Venue
 
+from .forms import DonasiForm
 from .models import Donasi
 
 
@@ -106,6 +110,18 @@ class DonasiTests(TestCase):
             expires_at=self.start + timedelta(hours=2),
             status=status,
         )
+
+    def image_upload(self, image_format, filename="foto.png"):
+        """Membuat file gambar kecil di memori tanpa menulis file uji ke media."""
+        buffer = BytesIO()
+        Image.new("RGB", (2, 2), "green").save(buffer, format=image_format)
+        return SimpleUploadedFile(
+            filename,
+            buffer.getvalue(),
+            content_type="image/png",
+        )
+
+    # ===== CRUD dan validasi form =====
 
     def test_list_and_detail_pages_can_be_opened(self):
         list_response = self.client.get(reverse("donasi:daftar"))
@@ -230,6 +246,24 @@ class DonasiTests(TestCase):
         self.assertEqual(invalid_location.status_code, 400)
         self.assertIn("lokasi", invalid_location.json()["errors"])
 
+    def test_form_checks_the_real_image_format(self):
+        """Foto PNG diterima, sedangkan isi GIF yang diberi nama PNG ditolak."""
+        valid_form = DonasiForm(
+            data=self.form_data(),
+            files={"foto": self.image_upload("PNG")},
+        )
+        self.assertTrue(valid_form.is_valid())
+        self.assertEqual(valid_form.cleaned_data["foto"].name, "foto.png")
+
+        invalid_form = DonasiForm(
+            data=self.form_data(),
+            files={"foto": self.image_upload("GIF")},
+        )
+        self.assertFalse(invalid_form.is_valid())
+        self.assertIn("Gunakan foto berformat JPG atau PNG.", invalid_form.errors["foto"])
+
+    # ===== Daftar, filter, dan pagination =====
+
     def test_search_location_and_status_filters(self):
         self.create_donation(
             donor=self.other_donor,
@@ -294,6 +328,47 @@ class DonasiTests(TestCase):
         self.assertContains(response, 'hx-target="#donation-results"', count=4)
         self.assertContains(response, 'hx-push-url="true"', count=4)
 
+    # ===== Hak akses dan keamanan respons =====
+
+    def test_json_access_errors_have_clear_status_codes(self):
+        """AJAX menerima 401 untuk anonim dan 403 untuk user yang bukan donor."""
+        anonymous_response = self.client.get(
+            reverse("donasi:buat"),
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(anonymous_response.status_code, 401)
+
+        self.client.force_login(self.recipient)
+        recipient_response = self.client.get(
+            reverse("donasi:buat"),
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(recipient_response.status_code, 403)
+
+    def test_private_list_requires_login_for_html_and_api(self):
+        """Daftar milik sendiri tidak boleh dibaca oleh pengunjung anonim."""
+        html_response = self.client.get(reverse("donasi:daftar"), {"mine": "1"})
+        api_response = self.client.get(reverse("donasi:api_list"), {"mine": "1"})
+
+        self.assertEqual(html_response.status_code, 302)
+        self.assertEqual(api_response.status_code, 401)
+
+    def test_delete_confirmation_and_missing_photo_are_handled(self):
+        """GET hapus menampilkan konfirmasi dan foto yang tidak ada menghasilkan 404."""
+        self.client.force_login(self.owner)
+        delete_response = self.client.get(
+            reverse("donasi:hapus", args=[self.item.pk])
+        )
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertContains(delete_response, "Hapus donasi ini?")
+
+        photo_url = reverse("donasi:foto", args=[self.item.pk])
+        self.assertEqual(self.client.get(photo_url).status_code, 404)
+
+        self.item.foto.name = "donasi/foto-tidak-ada.png"
+        self.item.save(update_fields=["foto"])
+        self.assertEqual(self.client.get(photo_url).status_code, 404)
+
     def test_json_hides_donor_from_anonymous_users(self):
         response = self.client.get(
             self.item.get_absolute_url(),
@@ -317,6 +392,8 @@ class DonasiTests(TestCase):
         self.item.waktu_akhir_pengambilan = timezone.now() - timedelta(hours=1)
         self.item.save()
         self.assertEqual(self.item.status_tampilan, "Pengambilan selesai")
+
+    # ===== Integrasi role, Klaim, dan Venue =====
 
     def test_navigation_is_different_for_donor_and_recipient(self):
         guest_html = self.client.get(reverse("donasi:daftar")).content.decode()

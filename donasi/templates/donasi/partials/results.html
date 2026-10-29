@@ -1,6 +1,10 @@
 {% load static %}
 {# Kumpulan kartu dan pagination; dapat dirender ulang saat filter AJAX berubah. #}
 
+<p id="filter-feedback" class="visually-hidden" role="status" aria-live="polite">
+  {{ page_obj.paginator.count }} donasi ditemukan.
+</p>
+
 <div class="donation-grid">
   {% for item in page_obj %}
     <article class="donation-food-card">
@@ -108,11 +112,15 @@
 </div>
 
 {% if page_obj.has_other_pages %}
+  {# Setiap link tetap memiliki href agar pagination bekerja tanpa HTMX. #}
   <nav class="donation-pagination" aria-label="Halaman donasi">
     {% if page_obj.has_previous %}
       <a
         href="{% querystring page=page_obj.previous_page_number %}"
         data-page="{{ page_obj.previous_page_number }}"
+        hx-get="{% querystring page=page_obj.previous_page_number %}"
+        hx-target="#donation-results"
+        hx-push-url="true"
         aria-label="Halaman sebelumnya"
       >‹</a>
     {% endif %}
@@ -121,6 +129,9 @@
       <a
         href="{% querystring page=number %}"
         data-page="{{ number }}"
+        hx-get="{% querystring page=number %}"
+        hx-target="#donation-results"
+        hx-push-url="true"
         {% if number == page_obj.number %}class="active" aria-current="page"{% endif %}
       >{{ number }}</a>
     {% endfor %}
@@ -129,6 +140,9 @@
       <a
         href="{% querystring page=page_obj.next_page_number %}"
         data-page="{{ page_obj.next_page_number }}"
+        hx-get="{% querystring page=page_obj.next_page_number %}"
+        hx-target="#donation-results"
+        hx-push-url="true"
         aria-label="Halaman berikutnya"
       >›</a>
     {% endif %}

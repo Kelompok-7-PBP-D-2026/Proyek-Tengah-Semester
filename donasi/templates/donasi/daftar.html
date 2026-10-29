@@ -17,7 +17,16 @@
     {% endif %}
   </div>
 
-  <form class="donation-filter donation-panel" method="get" id="donation-filter">
+  {# HTMX mengganti hasil tanpa reload; method GET tetap menjadi fallback tanpa JavaScript. #}
+  <form
+    class="donation-filter donation-panel"
+    method="get"
+    id="donation-filter"
+    hx-get="{% url 'donasi:daftar' %}"
+    hx-target="#donation-results"
+    hx-push-url="true"
+    hx-indicator="#donation-loading"
+  >
     <div>
       <label for="search">Cari makanan</label>
       <input
@@ -68,6 +77,9 @@
     <input type="hidden" name="status" value="{{ filters.status }}">
     <input type="hidden" name="mine" value="{% if filters.mine %}1{% endif %}">
     <button class="btn btn-mbg-green" type="submit">Terapkan</button>
+    <span id="donation-loading" class="htmx-indicator" aria-live="polite">
+      Memuat…
+    </span>
   </form>
 
   <div class="donation-tabs" aria-label="Filter status">
@@ -93,7 +105,7 @@
     {% endif %}
   </div>
 
-  <p id="filter-feedback" class="visually-hidden" role="status" aria-live="polite"></p>
+  {# HTMX hanya mengganti isi div ini dengan partial results.html. #}
   <div id="donation-results" aria-live="polite">
     {% include 'donasi/partials/results.html' %}
   </div>

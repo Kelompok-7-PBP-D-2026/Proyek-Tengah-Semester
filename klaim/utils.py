@@ -5,15 +5,12 @@ from zoneinfo import ZoneInfo
 
 from django.utils import timezone
 
-# The donation module hardcodes WIB, so slots and formatting do the same
-# and do not depend on the project's TIME_ZONE setting.
 WIB = ZoneInfo("Asia/Jakarta")
 
 SLOT_MINUTES = 30
 MAX_SLOTS = 48
 
 PICKUP_CODE_PREFIX = "MBG-"
-# Uppercase letters and digits without 0, O, 1, I to avoid visual confusion.
 PICKUP_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 PICKUP_CODE_LENGTH = 4
 

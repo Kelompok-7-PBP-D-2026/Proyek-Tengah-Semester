@@ -90,8 +90,6 @@ def _filtered_page(request, queryset):
     }
 
 
-# ---- recipient views -----------------------------------------------------
-
 @login_required
 def claim_create(request, donation_id):
     """Show and process the claim form for one donation."""
@@ -189,8 +187,6 @@ def claim_cancel(request, pk):
             messages.success(request, "Klaim berhasil dibatalkan.")
     return _redirect_back(request, "klaim:claim_list")
 
-
-# ---- donor views -----------------------------------------------------------
 
 @login_required
 @donor_required

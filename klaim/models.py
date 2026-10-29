@@ -9,8 +9,6 @@ from .utils import format_datetime_short, generate_pickup_code
 
 MAX_PORTIONS_PER_CLAIM = 3
 NOTE_MAX_LENGTH = 140
-# A recipient may arrive up to this many minutes after the pickup time they chose.
-# Set to 0 for a strict cutoff. The claim never outlives the donation's pickup deadline.
 PICKUP_GRACE_MINUTES = 30
 
 
@@ -22,8 +20,6 @@ class ClaimStatus(models.TextChoices):
     CANCELLED = "cancelled", "Dibatalkan"
     EXPIRED = "expired", "Kedaluwarsa"
 
-
-# Claims that still reserve portions and can be acted on.
 ACTIVE_STATUSES = (ClaimStatus.PENDING,)
 
 
@@ -44,10 +40,9 @@ class Claim(models.Model):
         related_name="claims_received",
         verbose_name="Donor",
     )
-    # Plain integer on purpose: the donation model belongs to another member.
+
     donation_id = models.PositiveIntegerField(db_index=True, verbose_name="Donasi")
 
-    # Snapshot of donation data at claim time.
     food_name = models.CharField(max_length=200, verbose_name="Makanan")
     donor_name = models.CharField(max_length=150, verbose_name="Nama donor")
     pickup_location = models.CharField(max_length=200, verbose_name="Lokasi ambil")
@@ -94,7 +89,6 @@ class Claim(models.Model):
             models.Index(fields=["status", "expires_at"]),
         ]
         constraints = [
-            # DB-level safety net: one pending claim per recipient per donation.
             models.UniqueConstraint(
                 fields=["recipient", "donation_id"],
                 condition=Q(status="pending"),
@@ -124,8 +118,6 @@ class Claim(models.Model):
                 return code
         raise RuntimeError("Could not generate a unique pickup code.")
 
-    # ---- state helpers -------------------------------------------------
-
     @property
     def is_overdue(self):
         """True when a pending claim passed its expiry but was not yet marked expired."""
@@ -150,8 +142,6 @@ class Claim(models.Model):
     def is_code_valid(self):
         """True while the pickup code can still be used."""
         return self.can_cancel
-
-    # ---- display helpers -----------------------------------------------
 
     @property
     def display_status(self):

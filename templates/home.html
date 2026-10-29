@@ -1,84 +1,280 @@
 {% extends "base.html" %}
+{% load static %}
+
+{% block title %}MBG — Selamatkan Makanan dari Sisa Acara{% endblock %}
+
+{% block body_class %}landing-page{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'css/landing.css' %}">
+{% endblock %}
 
 {% block content %}
-{# Hero — struktur mengikuti Landing B di Figma #}
-<section class="bg-forest text-cream py-5">
-    <div class="container py-4 text-center text-lg-start">
-        <h1 class="font-display display-3 fw-bold text-uppercase mb-3">
-            Selamatkan <span class="text-sunshine">Makanan</span><br>Dari Sisa Acara
-        </h1>
-        <p class="lead mb-4" style="max-width: 42rem;">
-            MBG menyalurkan makanan surplus acara kampus ke mahasiswa yang membutuhkan —
-            kurangi limbah, catat dampaknya.
-        </p>
-        <div class="d-flex gap-2 justify-content-center justify-content-lg-start">
-            <a class="btn btn-mbg-green px-4" style="background-color: var(--mbg-cream); color: var(--mbg-forest);" href="{% url 'donasi:daftar' %}">Cari Makanan Gratis</a>
-            <a class="btn btn-mbg-outline-green px-4" style="border-color: var(--mbg-cream); color: var(--mbg-cream);" href="{% url 'donasi:buat' %}">Bagikan Acara Makanan</a>
+    {# Hero: pesan utama dan ilustrasi mengikuti Landing B di Figma. #}
+    <section class="landing-hero" aria-labelledby="landing-title">
+        <div class="landing-shell landing-hero__inner">
+            <div class="landing-hero__copy">
+                <h1 id="landing-title">
+                    Selamatkan <span>makanan</span> dari sisa acara
+                </h1>
+                <p>
+                    MBG adalah platform yang menyalurkan makanan surplus dari
+                    penyelenggara acara kampus kepada mahasiswa yang membutuhkan,
+                    sehingga mengurangi limbah makanan dan membantu pemenuhan pangan.
+                </p>
+            </div>
+            <img
+                class="landing-hero__image"
+                src="{% static 'images/landing/hero.png' %}"
+                alt="Maskot MBG melambaikan tangan"
+            >
         </div>
-    </div>
-</section>
+    </section>
 
-<div class="ticker">
-    <span class="eyebrow">Makanan Berlebih Gratis • Makan Berlebih Gratis • Makanan Berlebih Gratis • Makan Berlebih Gratis</span>
-</div>
+    {# Intro interaktif: pengguna memilih informasi sesuai perannya. #}
+    <section class="landing-intro landing-section" aria-labelledby="intro-title">
+        <div class="landing-shell landing-intro__inner">
+            <h2 id="intro-title">
+                MBG membantu penyelenggara acara menyalurkan makanan berlebih ke
+                sesama mahasiswa.
+            </h2>
+            <p class="landing-lead">
+                Penyelenggara acara mengunggah porsi surplus lengkap dengan lokasi
+                dan batas waktu. Mahasiswa memesan dan mengambilnya, lalu semua
+                tercatat dalam laporan dampak kampus.
+            </p>
 
-<section id="makanan" class="container py-5">
-    <h2 class="font-display h3 text-uppercase mb-4">Makanan <span class="text-carrot">Tersedia</span></h2>
-    <div class="row g-3">
-        {% for item in makanan %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <span class="chip mb-2">{{ item.status }}</span>
-                    <h3 class="card-title h6 text-forest fw-bold">{{ item.nama }}</h3>
-                    <p class="small text-muted">{{ item.porsi }} porsi · {{ item.lokasi }} · {{ item.jarak }}</p>
-                    <span class="badge badge-deadline">Sebelum {{ item.batas_waktu }}</span>
+            <div class="role-tabs" role="tablist" aria-label="Pilih peran">
+                <button
+                    class="role-tab is-active"
+                    id="tab-donor"
+                    type="button"
+                    role="tab"
+                    aria-selected="true"
+                    aria-controls="panel-donor"
+                    data-role-tab="donor"
+                >
+                    Aku Donor
+                </button>
+                <button
+                    class="role-tab"
+                    id="tab-penerima"
+                    type="button"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="panel-penerima"
+                    data-role-tab="penerima"
+                >
+                    Aku Penerima
+                </button>
+            </div>
+
+            <div
+                class="role-panel"
+                id="panel-donor"
+                role="tabpanel"
+                aria-labelledby="tab-donor"
+                data-role-panel="donor"
+            >
+                <img src="{% static 'images/landing/donor.png' %}" alt="Maskot donor membawa pengeras suara">
+                <div class="role-panel__copy">
+                    <p class="landing-eyebrow">Untuk donor</p>
+                    <h3>Bagikan makanan surplus acaramu</h3>
+                    <p>
+                        Panitia acara, himpunan atau UKM, kantin, dan katering dapat
+                        mengunggah porsi, menyetujui klaim dengan kode ambil, serta
+                        memperoleh catatan dampak otomatis.
+                    </p>
+                    <a class="landing-button landing-button--secondary" href="{% url 'profil:daftar' %}?peran=donor">
+                        Daftar jadi donor
+                    </a>
+                </div>
+            </div>
+
+            <div
+                class="role-panel"
+                id="panel-penerima"
+                role="tabpanel"
+                aria-labelledby="tab-penerima"
+                data-role-panel="penerima"
+                hidden
+            >
+                <img src="{% static 'images/landing/penerima.png' %}" alt="Maskot penerima melambaikan tangan">
+                <div class="role-panel__copy">
+                    <p class="landing-eyebrow">Untuk penerima</p>
+                    <h3>Cari makanan gratis di sekitar kampus</h3>
+                    <p>
+                        Mahasiswa atau komunitas kampus dapat melihat makanan yang
+                        tersedia, mengklaim porsi, lalu mengambilnya dengan kode.
+                    </p>
+                    <a class="landing-button landing-button--primary" href="{% url 'profil:daftar' %}?peran=penerima">
+                        Daftar jadi penerima
+                    </a>
                 </div>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <p class="text-muted mb-0">Belum ada donasi makanan.</p>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-</section>
+    </section>
 
-<section id="dampak" class="container pb-5">
-    <h2 class="font-display h4 text-forest mb-4">Dampak Kita Bersama</h2>
-    <div class="row g-3">
-        {% for stat in dampak %}
-        <div class="col-md-4">
-            <div class="card text-center shadow-sm h-100">
-                <div class="card-body py-4">
-                    <p class="font-display display-6 text-forest fw-bold mb-1">{{ stat.angka }}</p>
-                    <p class="small text-muted mb-0">{{ stat.label }}</p>
-                </div>
-            </div>
+    {# Pita bergerak menjadi micro-interaction ringan dari rancangan Figma. #}
+    <div class="landing-marquee" aria-hidden="true">
+        <div class="landing-marquee__track">
+            <span>Makanan Berlebih Gratis <b>●</b></span>
+            <span>Makanan Berlebih Gratis <b>●</b></span>
+            <span>Makanan Berlebih Gratis <b>●</b></span>
+            <span>Makanan Berlebih Gratis <b>●</b></span>
         </div>
-        {% endfor %}
     </div>
-</section>
 
-<section class="container pb-5">
-    <h2 class="font-display h4 text-forest mb-4">Modul yang Sedang Dibangun</h2>
-    <div class="row g-3">
-        {% for modul in modul_list %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
-                <div class="card-body">
-                    <h3 class="card-title h6 text-forest">{{ modul.nama }}</h3>
-                    <p class="card-text small text-muted mb-0">{{ modul.pic }}</p>
-                </div>
+    {# Manfaat utama MBG. #}
+    <section class="landing-benefits landing-section" aria-labelledby="benefits-title">
+        <div class="landing-shell landing-benefits__layout">
+            <div class="benefit-list">
+                <article class="benefit-item">
+                    <span class="benefit-item__icon">
+                        <img src="{% static 'images/landing/benefit-free.svg' %}" alt="">
+                    </span>
+                    <h3>Makan gratis, tanpa syarat rumit</h3>
+                    <p>Pesan porsi yang tersedia, tunjukkan kode, dan ambil.</p>
+                </article>
+                <article class="benefit-item">
+                    <span class="benefit-item__icon">
+                        <img src="{% static 'images/landing/benefit-near.svg' %}" alt="">
+                    </span>
+                    <h3>Cari yang dekat denganmu</h3>
+                    <p>Peta menunjukkan jarak dari lokasimu ke tempat pengambilan.</p>
+                </article>
+            </div>
+
+            <div class="landing-benefits__center">
+                <h2 id="benefits-title">Kenapa pakai <span>MBG</span></h2>
+                <img src="{% static 'images/landing/why-mbg.png' %}" alt="Maskot MBG sedang berlari">
+            </div>
+
+            <div class="benefit-list">
+                <article class="benefit-item">
+                    <span class="benefit-item__icon">
+                        <img src="{% static 'images/landing/benefit-time.svg' %}" alt="">
+                    </span>
+                    <h3>Selalu ada batas waktu jelas</h3>
+                    <p>Setiap donasi menampilkan jam akhir pengambilan.</p>
+                </article>
+                <article class="benefit-item">
+                    <span class="benefit-item__icon">
+                        <img src="{% static 'images/landing/benefit-waste.svg' %}" alt="">
+                    </span>
+                    <h3>Kurangi sampah makanan kampus</h3>
+                    <p>Laporan dampak mencatat porsi makanan yang diselamatkan.</p>
+                </article>
             </div>
         </div>
-        {% empty %}
-        <p class="text-muted">Daftar modul belum tersedia.</p>
-        {% endfor %}
+    </section>
+
+    {# Empat langkah sederhana dari donasi sampai makanan diambil. #}
+    <section id="cara-kerja" class="landing-steps landing-section" aria-labelledby="steps-title">
+        <div class="landing-shell">
+            <h2 id="steps-title">Cara <span>kerja</span></h2>
+            <ol class="landing-steps__grid">
+                <li>
+                    <h3>Donor menitipkan</h3>
+                    <p>Isi nama makanan, jumlah porsi, lokasi, dan batas pengambilan.</p>
+                </li>
+                <li>
+                    <h3>Penerima mencari</h3>
+                    <p>Lihat makanan yang masih tersedia di sekitar kampus.</p>
+                </li>
+                <li>
+                    <h3>Pesan porsi</h3>
+                    <p>Pilih jumlah porsi dan simpan kode pengambilanmu.</p>
+                </li>
+                <li>
+                    <h3>Ambil dan nikmati</h3>
+                    <p>Tunjukkan kode di lokasi agar donor memverifikasi klaim.</p>
+                </li>
+            </ol>
+        </div>
+    </section>
+
+    {# Data kartu berasal dari tiga donasi terbaru yang masih dapat diklaim. #}
+    <section id="makanan" class="landing-food landing-section" aria-labelledby="food-title">
+        <div class="landing-shell">
+            <h2 id="food-title">Makanan <span>tersedia</span></h2>
+            <div class="landing-food__grid">
+                {% for item in makanan_tersedia %}
+                    <article class="landing-food-card">
+                        <div class="landing-food-card__media{% if not item.foto %} landing-food-card__media--fallback{% endif %}">
+                            {% if item.foto %}
+                                <img
+                                    src="{{ item.foto.url }}"
+                                    alt="Foto {{ item.nama }}"
+                                    data-donation-photo
+                                >
+                            {% else %}
+                                <img src="{% static 'images/landing/food-card.svg' %}" alt="" aria-hidden="true">
+                            {% endif %}
+                            <span class="landing-stock{% if item.jumlah_porsi <= 5 %} landing-stock--low{% endif %}">
+                                {{ item.jumlah_porsi }} porsi
+                            </span>
+                        </div>
+                        <div class="landing-food-card__body">
+                            <h3>{{ item.nama }}</h3>
+                            <p>{{ item.lokasi }}</p>
+                            <div class="landing-food-card__footer">
+                                <span>
+                                    Sebelum {{ item.waktu_akhir_pengambilan_wib|date:"H.i" }} WIB
+                                </span>
+                                <a href="{% url 'donasi:detail' item.pk %}" aria-label="Lihat detail {{ item.nama }}">
+                                    Detail
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="landing-empty">
+                        <h3>Belum ada makanan tersedia</h3>
+                        <p>Coba lihat kembali nanti atau jadilah donor pertama hari ini.</p>
+                    </div>
+                {% endfor %}
+            </div>
+            <a class="landing-button landing-button--secondary landing-food__more" href="{% url 'donasi:daftar' %}">
+                Lihat lainnya
+            </a>
+        </div>
+    </section>
+
+    <div class="landing-marquee" aria-hidden="true">
+        <div class="landing-marquee__track landing-marquee__track--reverse">
+            <span>Makanan Berlebih Gratis <b>●</b></span>
+            <span>Makanan Berlebih Gratis <b>●</b></span>
+            <span>Makanan Berlebih Gratis <b>●</b></span>
+            <span>Makanan Berlebih Gratis <b>●</b></span>
+        </div>
     </div>
-</section>
+
+    {# Statistik dihitung dari database, bukan angka contoh dari Figma. #}
+    <section class="landing-impact landing-section" aria-labelledby="impact-title">
+        <div class="landing-shell landing-impact__layout">
+            <div class="landing-impact__heading">
+                <h2 id="impact-title">Dampak kita <span>bersama</span></h2>
+                <p>
+                    Lewat setiap donasi, kita mencegah makanan terbuang sia-sia
+                    sekaligus memberikan dukungan nyata bagi mahasiswa di kampus.
+                </p>
+            </div>
+            <div class="landing-impact__stats">
+                <article class="impact-card impact-card--green">
+                    <strong>{{ total_porsi_diselamatkan }}</strong>
+                    <span>porsi berhasil diambil</span>
+                </article>
+                <article class="impact-card impact-card--yellow">
+                    <strong>{{ total_donasi }}</strong>
+                    <span>donasi makanan telah dibuat</span>
+                </article>
+                <img src="{% static 'images/landing/impact.png' %}" alt="Maskot MBG berbentuk hati">
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block extra_scripts %}
+    <script src="{% static 'js/landing.js' %}" defer></script>
 {% endblock %}

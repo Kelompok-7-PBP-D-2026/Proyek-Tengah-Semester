@@ -1,0 +1,829 @@
+/* Landing page MBG — implementasi frame "Landing B" dari Figma.
+   Semua class diawali "landing-" agar tidak mengubah tampilan modul lain. */
+
+.landing-page {
+    --landing-page: #fbf6e8;
+    --landing-ink: #0f2e19;
+    --landing-muted: #4a5d4f;
+    --landing-border: #e4d8b6;
+    background: var(--landing-page);
+    color: var(--landing-ink);
+}
+
+.landing-page main {
+    overflow: hidden;
+}
+
+.landing-shell {
+    width: min(100% - 3rem, 1120px);
+    margin-inline: auto;
+}
+
+.landing-section {
+    padding-block: 4rem;
+}
+
+.landing-page h1,
+.landing-page h2,
+.landing-page h3,
+.landing-page p {
+    margin-top: 0;
+}
+
+/* Hero */
+.landing-hero {
+    background: var(--mbg-forest);
+    color: var(--mbg-cream);
+}
+
+.landing-hero__inner {
+    min-height: 31.375rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.landing-hero__copy {
+    position: relative;
+    z-index: 2;
+    width: min(65%, 46rem);
+    padding-block: 2.5rem 3.5rem;
+}
+
+.landing-hero h1 {
+    max-width: 45rem;
+    margin-bottom: 1.25rem;
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-size: clamp(3.4rem, 7.5vw, 5.25rem);
+    font-weight: 600;
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    text-transform: uppercase;
+}
+
+.landing-hero h1 span {
+    color: var(--mbg-sunshine);
+}
+
+.landing-hero__copy > p {
+    max-width: 31rem;
+    margin-bottom: 0;
+    font-size: 1.1875rem;
+    line-height: 1.5;
+}
+
+.landing-hero__image {
+    position: absolute;
+    z-index: 1;
+    right: -6%;
+    bottom: -20%;
+    width: min(58vw, 44rem);
+    animation: landing-float 3.8s ease-in-out infinite;
+}
+
+/* Intro dan pilihan peran */
+.landing-intro__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.landing-intro h2 {
+    max-width: 51rem;
+    margin-bottom: 1.125rem;
+    color: var(--mbg-forest);
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(1.5rem, 3vw, 1.875rem);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.04em;
+    text-align: center;
+}
+
+.landing-lead {
+    max-width: 55rem;
+    margin-bottom: 1.75rem;
+    color: var(--landing-muted);
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    text-align: center;
+}
+
+.role-tabs {
+    display: inline-flex;
+    gap: 0.25rem;
+    margin-bottom: 1.25rem;
+    padding: 0.3125rem;
+    border: 1px solid var(--landing-border);
+    border-radius: 999px;
+    background: #fff;
+}
+
+.role-tab {
+    min-height: 2.25rem;
+    padding: 0.625rem 1.5rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--mbg-forest);
+    font: 700 0.9375rem/1 "Poppins", sans-serif;
+    transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.role-tab:hover {
+    background: color-mix(in srgb, var(--mbg-forest) 10%, transparent);
+}
+
+.role-tab.is-active {
+    background: var(--mbg-forest);
+    color: var(--mbg-cream);
+}
+
+.role-panel {
+    width: min(100%, 52.5rem);
+    min-height: 15rem;
+    display: grid;
+    grid-template-columns: 15rem 1fr;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--landing-border) 65%, transparent);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 0.75rem 2rem rgba(15, 46, 25, 0.09);
+}
+
+.role-panel[hidden] {
+    display: none;
+}
+
+.role-panel > img {
+    width: 100%;
+    max-height: 17rem;
+    align-self: end;
+    object-fit: contain;
+}
+
+.role-panel__copy {
+    padding: 2rem 2rem 2rem 1rem;
+}
+
+.landing-eyebrow {
+    margin-bottom: 1.25rem;
+    color: var(--mbg-carrot);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.role-panel h3 {
+    margin-bottom: 0.75rem;
+    color: var(--mbg-forest);
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-size: clamp(1.5rem, 3vw, 1.875rem);
+    font-weight: 600;
+    line-height: 1.1;
+}
+
+.role-panel__copy > p:not(.landing-eyebrow) {
+    margin-bottom: 1.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+}
+
+/* Tombol khusus landing */
+.landing-button {
+    display: inline-flex;
+    min-height: 2.6875rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.875rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.landing-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(15, 46, 25, 0.18);
+}
+
+.landing-button--primary {
+    background: var(--mbg-carrot);
+    color: var(--landing-ink);
+}
+
+.landing-button--primary:hover {
+    background: #e65310;
+    color: var(--landing-ink);
+}
+
+.landing-button--secondary {
+    background: var(--mbg-forest);
+    color: #fff;
+}
+
+.landing-button--secondary:hover {
+    background: #134424;
+    color: #fff;
+}
+
+/* Pita teks bergerak */
+.landing-marquee {
+    overflow: hidden;
+    background: #134424;
+    color: var(--mbg-cream);
+}
+
+.landing-marquee__track {
+    width: max-content;
+    display: flex;
+    gap: 2.25rem;
+    padding-block: 0.875rem;
+    animation: landing-marquee 18s linear infinite;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.landing-marquee__track--reverse {
+    animation-direction: reverse;
+}
+
+.landing-marquee__track span {
+    white-space: nowrap;
+}
+
+.landing-marquee__track b {
+    margin-left: 2.25rem;
+    color: var(--mbg-sunshine);
+}
+
+/* Manfaat */
+.landing-benefits__layout {
+    display: grid;
+    grid-template-columns: minmax(13rem, 1fr) minmax(20rem, 1.45fr) minmax(13rem, 1fr);
+    gap: 2rem;
+    align-items: center;
+}
+
+.benefit-list {
+    display: grid;
+    gap: 3.25rem;
+}
+
+.benefit-item__icon {
+    width: 3rem;
+    height: 3rem;
+    display: grid;
+    place-items: center;
+    margin-bottom: 0.5rem;
+    border-radius: 50%;
+    background: var(--mbg-sunshine);
+}
+
+.benefit-item__icon img {
+    width: 1.625rem;
+    height: 1.625rem;
+}
+
+.benefit-item h3 {
+    margin-bottom: 0.5rem;
+    color: var(--mbg-forest);
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.15;
+}
+
+.benefit-item p {
+    margin-bottom: 0;
+    color: var(--landing-muted);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+}
+
+.landing-benefits__center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.landing-benefits__center h2 {
+    margin-bottom: -1rem;
+    color: var(--mbg-forest);
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-size: clamp(2.4rem, 5vw, 3.25rem);
+    font-weight: 600;
+    line-height: 1;
+}
+
+.landing-benefits__center h2 span {
+    display: block;
+    color: var(--mbg-carrot);
+    font-size: clamp(3.5rem, 7vw, 5.25rem);
+    text-transform: uppercase;
+}
+
+.landing-benefits__center img {
+    width: min(100%, 25rem);
+}
+
+/* Alur */
+.landing-steps {
+    background: var(--mbg-forest);
+    color: var(--mbg-cream);
+}
+
+.landing-steps h2,
+.landing-food h2 {
+    margin-bottom: 2rem;
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.landing-steps h2 span {
+    color: var(--mbg-sunshine);
+}
+
+.landing-steps__grid {
+    counter-reset: landing-step;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.landing-steps__grid li {
+    counter-increment: landing-step;
+    min-height: 10.25rem;
+    padding: 1.125rem;
+    border-radius: 28px;
+    background: #fff;
+    color: var(--landing-ink);
+    transition: transform 180ms ease;
+}
+
+.landing-steps__grid li:hover {
+    transform: translateY(-0.375rem);
+}
+
+.landing-steps__grid h3 {
+    margin-bottom: 0.5rem;
+    color: var(--mbg-forest);
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    text-transform: uppercase;
+}
+
+.landing-steps__grid h3::before {
+    content: counter(landing-step) ". ";
+}
+
+.landing-steps__grid p {
+    margin-bottom: 0;
+    color: var(--landing-muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
+/* Kartu makanan */
+.landing-food h2 {
+    color: var(--mbg-forest);
+}
+
+.landing-food h2 span,
+.landing-impact h2 span {
+    color: var(--mbg-carrot);
+}
+
+.landing-food__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.landing-food-card {
+    overflow: hidden;
+    border: 1px solid rgba(25, 83, 43, 0.08);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 0.75rem 2rem rgba(15, 46, 25, 0.07);
+    transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.landing-food-card:hover {
+    transform: translateY(-0.375rem);
+    box-shadow: 0 1rem 2.5rem rgba(15, 46, 25, 0.13);
+}
+
+.landing-food-card__media {
+    height: 9.5rem;
+    position: relative;
+    overflow: hidden;
+    background-color: var(--mbg-sunshine);
+    background-image: url("../images/landing/food-card.svg");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem bottom;
+    background-size: 42% auto;
+}
+
+.landing-food-card__media > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.landing-food-card__media--fallback > img {
+    width: 42%;
+    margin-left: 55%;
+    object-fit: contain;
+}
+
+/* Footer bersama tetap dipakai; landing hanya memperjelas kontras warnanya. */
+.landing-page footer,
+.landing-page footer .text-cream {
+    color: var(--mbg-cream) !important;
+}
+
+.landing-page footer a {
+    color: var(--mbg-cream);
+}
+
+.landing-page footer a:hover {
+    color: var(--mbg-sunshine);
+}
+
+.landing-stock {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    background: var(--mbg-kiwi);
+    color: var(--landing-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.landing-stock::before {
+    content: "●";
+    margin-right: 0.35rem;
+}
+
+.landing-stock--low {
+    background: var(--mbg-sunshine);
+}
+
+.landing-food-card__body {
+    padding: 1rem;
+}
+
+.landing-food-card h3 {
+    margin-bottom: 0.4rem;
+    color: var(--mbg-forest);
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.landing-food-card__body > p {
+    margin-bottom: 1rem;
+    color: var(--landing-muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.landing-food-card__footer {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.landing-food-card__footer span {
+    color: var(--mbg-tomato);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.landing-food-card__footer a {
+    padding: 0.625rem 0.875rem;
+    border-radius: 12px;
+    background: var(--mbg-sunshine);
+    color: var(--landing-ink);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.landing-empty {
+    grid-column: 1 / -1;
+    padding: 3rem 1.5rem;
+    border: 2px dashed var(--landing-border);
+    border-radius: 20px;
+    text-align: center;
+}
+
+.landing-empty h3 {
+    color: var(--mbg-forest);
+    font-family: "Fredoka", "Poppins", sans-serif;
+}
+
+.landing-empty p {
+    margin-bottom: 0;
+    color: var(--landing-muted);
+}
+
+.landing-food__more {
+    width: fit-content;
+    margin: 2rem auto 0;
+}
+
+/* Statistik dampak */
+.landing-impact__layout {
+    display: grid;
+    gap: 2.5rem;
+}
+
+.landing-impact__heading {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    gap: 3rem;
+    align-items: center;
+}
+
+.landing-impact h2 {
+    margin-bottom: 0;
+    color: var(--mbg-forest);
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
+    font-weight: 600;
+    line-height: 0.98;
+    text-transform: uppercase;
+}
+
+.landing-impact__heading p {
+    margin-bottom: 0;
+    color: var(--landing-muted);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+}
+
+.landing-impact__stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 0.9fr;
+    gap: 2rem;
+    align-items: center;
+}
+
+.impact-card {
+    min-height: 8.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    border-radius: 20px;
+    text-align: center;
+}
+
+.impact-card strong {
+    font-family: "Fredoka", "Poppins", sans-serif;
+    font-size: clamp(2.5rem, 6vw, 3.25rem);
+    line-height: 1;
+}
+
+.impact-card span {
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.impact-card--green {
+    background: var(--mbg-forest);
+    color: #fff;
+}
+
+.impact-card--green strong {
+    color: var(--mbg-sunshine);
+}
+
+.impact-card--yellow {
+    border: 2px solid var(--landing-ink);
+    background: var(--mbg-sunshine);
+}
+
+.landing-impact__stats > img {
+    width: min(100%, 18rem);
+    justify-self: end;
+}
+
+/* Aksesibilitas interaksi */
+.landing-page :focus-visible {
+    outline: 3px solid var(--mbg-carrot);
+    outline-offset: 3px;
+}
+
+@keyframes landing-float {
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-0.75rem) rotate(1.5deg);
+    }
+}
+
+@keyframes landing-marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-25%);
+    }
+}
+
+/* Tablet */
+@media (max-width: 991.98px) {
+    .landing-shell {
+        width: min(100% - 2rem, 52rem);
+    }
+
+    .landing-hero__copy {
+        width: 72%;
+    }
+
+    .landing-hero__image {
+        right: -18%;
+        width: min(70vw, 38rem);
+    }
+
+    .landing-benefits__layout {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .landing-benefits__center {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .benefit-list {
+        gap: 2rem;
+    }
+
+    .landing-steps__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .landing-food__grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .landing-food-card:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+
+    .landing-impact__stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .landing-impact__stats > img {
+        grid-column: 1 / -1;
+        justify-self: center;
+    }
+}
+
+/* Ponsel */
+@media (max-width: 767.98px) {
+    .landing-section {
+        padding-block: 3rem;
+    }
+
+    .landing-hero__inner {
+        min-height: 42rem;
+        align-items: flex-start;
+    }
+
+    .landing-hero__copy {
+        width: 100%;
+        padding-top: 3rem;
+    }
+
+    .landing-hero h1 {
+        font-size: clamp(3rem, 15vw, 4.4rem);
+    }
+
+    .landing-hero__copy > p {
+        max-width: 100%;
+        font-size: 1rem;
+    }
+
+    .landing-hero__image {
+        right: -15%;
+        bottom: -13%;
+        width: min(92vw, 34rem);
+    }
+
+    .role-panel {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .role-panel > img {
+        width: min(65%, 15rem);
+        margin-inline: auto;
+    }
+
+    .role-panel__copy {
+        padding: 0 1.25rem 1.75rem;
+    }
+
+    .landing-eyebrow {
+        margin-bottom: 0.75rem;
+    }
+
+    .landing-benefits__layout,
+    .landing-impact__heading,
+    .landing-impact__stats {
+        grid-template-columns: 1fr;
+    }
+
+    .landing-benefits__center {
+        grid-column: auto;
+    }
+
+    .benefit-list {
+        gap: 1rem;
+    }
+
+    .benefit-item {
+        padding: 1rem;
+        border-radius: 20px;
+        background: #fff;
+    }
+
+    .landing-steps__grid,
+    .landing-food__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .landing-food-card:last-child:nth-child(odd) {
+        grid-column: auto;
+    }
+
+    .landing-impact__heading {
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .landing-impact__stats > img {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .landing-shell {
+        width: min(100% - 1.5rem, 34rem);
+    }
+
+    .role-tabs {
+        width: 100%;
+    }
+
+    .role-tab {
+        flex: 1;
+        padding-inline: 0.75rem;
+    }
+
+    .landing-steps__grid {
+        gap: 0.75rem;
+    }
+}
+
+/* Pengguna yang mematikan animasi tetap mendapat tampilan yang nyaman. */
+@media (prefers-reduced-motion: reduce) {
+    .landing-hero__image,
+    .landing-marquee__track {
+        animation: none;
+    }
+
+    .landing-button,
+    .landing-food-card,
+    .landing-steps__grid li {
+        transition: none;
+    }
+}

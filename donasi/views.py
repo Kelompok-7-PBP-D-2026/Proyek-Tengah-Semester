@@ -29,6 +29,11 @@ def wants_json(request):
     return "application/json" in request.headers.get("Accept", "")
 
 
+def wants_partial(request):
+    """Mendeteksi request HTMX yang hanya membutuhkan potongan template."""
+    return request.headers.get("HX-Request") == "true"
+
+
 def donor_access_error(request):
     """Mengembalikan respons error jika pengguna bukan donor yang sah."""
     if not request.user.is_authenticated:
@@ -158,7 +163,7 @@ def serialize_donasi(item, request):
 @timezone.override(WIB)
 @translation.override("id")
 def daftar(request):
-    """Menampilkan daftar HTML atau partial card JSON untuk filter AJAX."""
+    """Menampilkan halaman lengkap, partial HTMX, atau data filter berbentuk JSON."""
     # Filter Donasi Saya bersifat pribadi, sehingga pengunjung harus login.
     if request.GET.get("mine") == "1" and not request.user.is_authenticated:
         return redirect_to_login(request.get_full_path(), reverse(LOGIN_URL))
@@ -175,7 +180,11 @@ def daftar(request):
         .values_list("lokasi", flat=True)
         .distinct(),
     }
-    # AJAX hanya membutuhkan potongan card; request biasa menerima halaman lengkap.
+    # HTMX langsung menerima partial HTML untuk mengganti wadah hasil Donasi.
+    if wants_partial(request):
+        return render(request, "donasi/partials/results.html", context)
+
+    # Respons JSON lama tetap tersedia untuk konsumen yang memakai fetch/API.
     if wants_json(request):
         html = render_to_string(
             "donasi/partials/results.html",

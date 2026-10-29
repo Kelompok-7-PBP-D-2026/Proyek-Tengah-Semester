@@ -1,7 +1,6 @@
 (() => {
-  // Elemen utama untuk filter tanpa memuat ulang seluruh halaman.
+  // Form filter dikirim oleh HTMX; JavaScript hanya mengatur tab statusnya.
   const filterForm = document.querySelector("#donation-filter");
-  const results = document.querySelector("#donation-results");
 
   function getCookie(name) {
     // Token CSRF dari cookie wajib dikirim pada request POST Django.
@@ -59,49 +58,15 @@
     });
   }
 
-  async function loadResults(url) {
-    // Minta partial card terbaru, lalu ganti hanya bagian hasil pencarian.
-    results.setAttribute("aria-busy", "true");
-
-    try {
-      const response = await fetch(url, {
-        headers: { Accept: "application/json" },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Donasi gagal dimuat.");
-
-      results.innerHTML = data.html;
-      document.querySelector("#filter-feedback").textContent = `${data.count} donasi ditemukan.`;
-      updateActiveTab();
-    } catch (error) {
-      showToast(error.message || "Donasi gagal dimuat.");
-    } finally {
-      results.removeAttribute("aria-busy");
-    }
-  }
-
-  if (filterForm && results) {
-    // Filter dan pagination meminta HTML kartu terbaru melalui JSON.
-    filterForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const url = new URL(window.location.href);
-      url.search = new URLSearchParams(new FormData(filterForm)).toString();
-      loadResults(url);
-    });
-
+  if (filterForm) {
+    // Klik tab mengisi input tersembunyi, lalu HTMX mengirim form GET yang sama.
     document.querySelectorAll(".donation-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         filterForm.elements.mine.value = tab.dataset.filterMine || "";
         filterForm.elements.status.value = tab.dataset.filterStatus || "";
+        updateActiveTab();
         filterForm.requestSubmit();
       });
-    });
-
-    results.addEventListener("click", (event) => {
-      const link = event.target.closest("a[data-page]");
-      if (!link) return;
-      event.preventDefault();
-      loadResults(link.href);
     });
   }
 

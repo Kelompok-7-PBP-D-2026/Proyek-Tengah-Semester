@@ -40,8 +40,12 @@ class DaftarPenerimaForm(UserCreationForm):
 class ProfilDonorForm(forms.ModelForm):
     class Meta:
         model = ProfilDonor
-        fields = ("nama_unit", "jenis", "kontak", "deskripsi")
-        widgets = {"deskripsi": forms.Textarea(attrs={"rows": 4})}
+        fields = ("nama_unit", "jenis", "kontak", "deskripsi", "alamat", "latitude", "longitude")
+        widgets = {
+            "deskripsi": forms.Textarea(attrs={"rows": 4}),
+            "latitude": forms.HiddenInput(),
+            "longitude": forms.HiddenInput(),
+        }
 
 
 class ProfilPenerimaForm(forms.ModelForm):

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -55,6 +56,29 @@ class ProfilDonor(models.Model):
         help_text="Email atau nomor WhatsApp.",
     )
     deskripsi = models.TextField(blank=True)
+    # Lokasi dari OpenStreetMap (dipakai filter jarak di daftar donor).
+    alamat = models.CharField(
+        "alamat lokasi donor",
+        max_length=255,
+        blank=True,
+        help_text="Terisi otomatis dari pencarian OpenStreetMap.",
+    )
+    latitude = models.DecimalField(
+        "latitude",
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+    )
+    longitude = models.DecimalField(
+        "longitude",
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+    )
     terverifikasi = models.BooleanField("sudah diverifikasi admin", default=False)
     dibuat_pada = models.DateTimeField(auto_now_add=True)
     diubah_pada = models.DateTimeField(auto_now=True)

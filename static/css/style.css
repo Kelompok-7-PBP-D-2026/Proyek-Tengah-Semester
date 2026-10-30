@@ -50,6 +50,31 @@ footer .text-cream {
     color: var(--mbg-cream) !important;
 }
 
+/* Link navbar memakai bentuk pil yang sama pada hover dan halaman aktif. */
+.mbg-navbar-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 20px;
+    border-radius: 999px;
+    color: var(--mbg-forest) !important;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+.mbg-navbar-link:hover,
+.mbg-navbar-link:focus-visible,
+.mbg-navbar-link.is-active {
+    background-color: var(--mbg-forest);
+    color: var(--mbg-cream) !important;
+    font-weight: 700;
+}
+
 /* Tombol */
 .btn-mbg-primary {
     background-color: var(--mbg-carrot);

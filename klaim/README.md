@@ -2,10 +2,11 @@
 
 Modul ini menangani alur **klaim makanan** pada aplikasi **MBG (Makanan Berlebih Gratis)**, proyek PBP Kelompok 7. Penerima mengklaim makanan surplus dari donasi, mendapat **kode ambil unik**, lalu menunjukkan kode itu ke donor saat mengambil makanan. Donor memverifikasi kode, dan klaim dinyatakan selesai.
 
-Modul ini terhubung ke dua modul lain lewat satu file adapter, `klaim/integrations.py`:
+Modul ini terhubung ke tiga modul lain lewat satu file adapter, `klaim/integrations.py`:
 
 - **`donasi`**: data makanan, stok porsi, batas ambil.
 - **`profil`**: peran pengguna (donor atau penerima), nama organisasi, dan NIM.
+- **`venue`**: koordinat lokasi pengambilan untuk jarak dan tautan peta.
 
 ## Fitur
 
@@ -13,7 +14,8 @@ Modul ini terhubung ke dua modul lain lewat satu file adapter, `klaim/integratio
 - Form klaim: jumlah porsi, waktu ambil (slot 30 menit), catatan opsional (maks. 140 huruf).
 - Kode ambil otomatis berformat `MBG-XXXX` (tanpa karakter 0, O, 1, I).
 - Halaman **Klaim Saya**: tabel, chip filter status dengan jumlah, paginasi 5 per halaman.
-- Halaman **Detail Klaim**: kode ambil, timeline, rincian, tombol **Batalkan klaim** (hanya di sini).
+- Halaman **Detail Klaim**: kode ambil, timeline, rincian, kartu lokasi (lokasi ambil, tautan peta, rute, dan jarak), tombol **Batalkan klaim** (hanya di sini).
+- Tombol **Klaim** di halaman donasi, dengan alasan penolakan tampil sebagai popover.
 
 **Donor**
 - Halaman **Klaim Masuk**: tiga kartu ringkasan (menunggu diambil, sudah diambil, tidak diambil) dan tabel klaim.
@@ -49,8 +51,8 @@ Satu akun hanya punya satu peran, ditentukan oleh profil yang diisi saat daftar 
 
 Aturan pengecekan (semua di `integrations.py`):
 
-- `is_recipient(user)`: true jika user punya `profil_penerima`. Alasan penolakan tersedia lewat `recipient_block_reason(user)`.
-- `is_donor(user)`: true jika user punya `profil_donor`. Akun tanpa profil apa pun (misalnya akun lama atau superuser) memakai fallback ke `donasi.permissions.is_donor`.
+- `is_recipient(user)` bernilai true jika user punya `profil_penerima`. Alasan penolakan tersedia lewat `recipient_block_reason(user)`.
+- `is_donor(user)` bernilai true jika user punya `profil_donor`. Akun tanpa profil apa pun (misalnya akun lama atau superuser) memakai fallback ke `donasi.permissions.is_donor`.
 - Akun donor tidak bisa mengklaim makanan, dan akun penerima tidak bisa membuka Klaim Masuk.
 - Verifikasi admin (`terverifikasi`) belum diwajibkan. Ubah `REQUIRE_VERIFIED_DONOR` dan `REQUIRE_VERIFIED_RECIPIENT` menjadi `True` di `integrations.py` jika tim ingin mewajibkannya.
 
@@ -94,31 +96,87 @@ Klaim kedaluwarsa jika penerima tidak datang melewati **waktu ambil yang dipilih
 python manage.py expire_claims
 ```
 
+## Jarak dan rute ke lokasi pengambilan
+
+Jarak **dihitung ulang setiap halaman dibuka**, dari lokasi penerima ke venue tempat makanan diambil.
+
+- **Lokasi makanan:** `Claim.pickup_location` dicocokkan ke `Venue.nama` (tanpa membedakan huruf besar atau kecil). Kalau tidak ada venue yang cocok, jarak tampil `-`.
+- **Lokasi penerima:** diambil di browser lewat Geolocation API. Kalau izin ditolak atau tidak tersedia, titik asal memakai pusat kampus (`venue.utils.CAMPUS_CENTER`) dengan keterangan "Perkiraan dari pusat kampus".
+- **Moda:** dropdown **Pilih moda** berisi Jalan kaki, Sepeda, dan Motor / mobil. Sebelum moda dipilih, jarak menampilkan *Pilih moda*. Setelah dipilih, tampil seperti **2,1 km (9 menit)**.
+- **Rute:** dihitung di browser lewat OSRM milik OpenStreetMap (`routing.openstreetmap.de`), sama seperti halaman venue. Kalau routing gagal, tampil garis lurus (haversine) dengan keterangan "garis lurus".
+- **Cache:** hasil rute disimpan di `sessionStorage` maksimal 5 menit, dan permintaan dikirim satu per satu supaya tidak melebihi batas layanan. Pilihan moda diingat selama sesi (`REMEMBER_MODE` di `claim_distance.js`).
+- **Tautan peta:** **Lihat Lokasi dan Peta** mengarah ke `venue:detail` (`/venue/<id>/`).
+- **Privasi:** lokasi tidak dikirim ke server Django, tetapi koordinat penerima dan venue dikirim ke layanan routing OpenStreetMap setelah moda dipilih.
+
+Halaman yang menampilkannya:
+
+| Halaman | Tampilan |
+|---|---|
+| Detail Klaim | Kartu lokasi (lokasi ambil, tautan peta, rute, jarak). Rute dan jarak hanya untuk klaim yang masih aktif. |
+| Form klaim | Baris **Rute** dan **Jarak** di kartu Ringkasan, dan jarak singkat di kartu makanan setelah moda dipilih. |
+
+## Tombol Klaim di halaman donasi
+
+Template donasi memasang tag berikut, dengan variabel berupa **instance `Donasi`**:
+
+```django
+{% load claim_extras %}
+{% claim_button item %}
+```
+
+Dan di blok script halaman:
+
+```django
+{% block extra_scripts %}
+{% claim_button_scripts %}
+{% endblock %}
+```
+
+Perilaku tombol:
+
+| Kondisi | Tampilan |
+|---|---|
+| Belum login | Tombol aktif, diarahkan ke login |
+| Donor, atau pemilik donasi | Tombol disembunyikan |
+| Akun tanpa profil penerima | Tombol pudar, alasan tampil di popover |
+| Donasi habis, lewat batas, atau sudah diklaim | Tombol pudar, alasan tampil di popover |
+| Bisa diklaim | Tombol *Klaim* aktif |
+
+Tombol pudar tetap bisa diklik tanpa pindah halaman. Popover Bootstrap (`claim_popover.js`) memakai delegasi pada `<body>`, jadi tetap berfungsi setelah daftar donasi diperbarui oleh filter atau pencarian. Tag ini butuh context processor `django.template.context_processors.request`.
+
 ## Struktur folder
 
 ```
 klaim/
 ├── admin.py
 ├── forms.py                  # ClaimForm (porsi, slot waktu, catatan)
-├── integrations.py           # SATU-SATUNYA adapter ke donasi dan profil
+├── integrations.py           # SATU-SATUNYA adapter ke donasi, profil, dan venue
 ├── models.py                 # Claim, ClaimStatus, konstanta
 ├── services.py               # aturan bisnis (create, cancel, verify, expire)
+├── tests.py                  # unit test seluruh modul
 ├── urls.py
 ├── utils.py                  # slot waktu (WIB), kode ambil, format tanggal Indonesia
 ├── views.py
 ├── management/commands/
 │   └── expire_claims.py
 ├── templatetags/
-│   └── claim_extras.py       # filter format + tag {% claim_button %}
+│   └── claim_extras.py       # filter format + tag claim_button, claim_location_card, dll.
 ├── templates/klaim/
 │   ├── claim_form.html       # 3A Buat Klaim
 │   ├── claim_list.html       # 3B Klaim Saya
 │   ├── claim_detail.html     # 3C Detail Klaim
 │   ├── incoming_claims.html  # 3E/3F/3G Klaim Masuk + modal verifikasi
-│   └── _*.html               # partial: badge, pagination, messages, ikon, tombol klaim
+│   ├── _claim_button.html    # tombol Klaim di halaman donasi
+│   ├── _location_card.html   # kartu lokasi (lokasi ambil, rute, jarak)
+│   ├── _distance_rows.html   # baris Rute (dropdown) dan Jarak
+│   ├── _distance_inline.html # jarak singkat di kartu makanan
+│   └── _*.html               # partial lain: badge, pagination, messages, ikon
 └── static/klaim/
     ├── css/claim.css         # di-scope di bawah .claim-page
-    └── js/claim.js           # konfirmasi, modal verifikasi, penghitung huruf, dll.
+    └── js/
+        ├── claim.js          # konfirmasi, modal verifikasi, penghitung huruf, dll.
+        ├── claim_distance.js # rute dan jarak dari lokasi penerima
+        └── claim_popover.js  # popover alasan di tombol Klaim
 ```
 
 Template klaim memuat CSS lewat `{% block extra_head %}` dan JS lewat `{% block extra_scripts %}` milik `base.html`.
@@ -150,8 +208,8 @@ Semua rute berada di bawah `/klaim/` dengan namespace `klaim`.
 | `pickup_deadline` | `Donasi.waktu_akhir_pengambilan` |
 | `available_portions` | `Donasi.jumlah_porsi` (stok sisa) |
 | `owner_id` | `Donasi.donor_id` |
-| `donor_name` | `donor.profil_donor.nama_unit`, fallback ke nama atau username pemilik |
-| `distance_km` | belum ada, ditampilkan `-` |
+| `donor_name` | `donor.profil_donor.nama_unit`, dengan fallback ke nama atau username pemilik |
+| `distance_km` | tidak disimpan, dihitung di browser |
 
 ### Profil (`profil`)
 
@@ -161,40 +219,28 @@ Semua rute berada di bawah `/klaim/` dengan namespace `klaim`.
 | Peran penerima | `user.profil_penerima` |
 | Nama donor | `ProfilDonor.nama_unit` |
 | Nama penerima | `ProfilPenerima.nama_lengkap` |
-| NIM (disamarkan untuk donor) | `ProfilPenerima.nim`, tampil sebagai `2506 xxxx` (`NIM_VISIBLE_DIGITS`) |
+| NIM | `ProfilPenerima.nim`, disamarkan untuk donor menjadi `2506 xxxx` (`NIM_VISIBLE_DIGITS`) |
 | Halaman profil | URL `profil:profil_saya` |
 
-Jika nama model, field, atau URL berubah, cukup ubah konstanta di bagian atas `integrations.py`: `DONATION_MODEL`, `FIELD_MAP`, `DONOR_PROFILE_ATTR`, `RECIPIENT_PROFILE_ATTR`, dan nama URL.
+### Venue (`venue.Venue`)
 
-### Tombol "Klaim" di modul donasi
-
-Template donasi memasang tag berikut, dengan variabel berupa **instance `Donasi`**:
-
-```django
-{% load claim_extras %}
-{% claim_button item %}
-```
-
-Perilaku tombol:
-
-| Kondisi | Tampilan |
+| Kebutuhan | Sumber |
 |---|---|
-| Belum login | Tombol aktif, diarahkan ke login |
-| Donor, atau pemilik donasi | Tombol disembunyikan |
-| Akun tanpa profil penerima | Tombol nonaktif, alasan sebagai tooltip |
-| Donasi habis, lewat batas, atau sudah diklaim | Tombol nonaktif, alasan sebagai tooltip |
-| Bisa diklaim | Tombol *Klaim* aktif |
+| Pencocokan lokasi | `Claim.pickup_location` dengan `Venue.nama` (case-insensitive, `pk` terkecil jika ada nama kembar) |
+| Koordinat | `Venue.latitude` dan `Venue.longitude` |
+| Pusat kampus (titik asal cadangan) | `venue.utils.CAMPUS_CENTER` |
+| Tautan peta | URL `venue:detail` |
 
-Tag ini butuh context processor `django.template.context_processors.request`.
+Jika nama model, field, atau URL berubah, cukup ubah konstanta di bagian atas `integrations.py`: `DONATION_MODEL`, `FIELD_MAP`, `DONOR_PROFILE_ATTR`, `RECIPIENT_PROFILE_ATTR`, `VENUE_MODEL`, `VENUE_NAME_FIELD`, dan nama URL.
 
 ### Navbar (`templates/header.html`)
 
-Menu dibedakan per peran dan menu aktif ditandai pil hijau:
+Menu dibedakan per peran, dan menu aktif ditandai pil hijau:
 
 | Peran | Menu |
 |---|---|
 | Penerima | Klaim saya (`klaim:claim_list`), Cari makanan (`donasi:daftar`), Dampak |
-| Donor | Klaim masuk (`klaim:incoming_claim_list`), Donasi saya (`donasi:daftar?mine=1`), Dampak |
+| Donor | Klaim masuk (`klaim:incoming_claim_list`), Donasi saya (`donasi:daftar` dengan `?mine=1`), Dampak |
 
 ## Cara menjalankan
 
@@ -215,29 +261,106 @@ python manage.py makemigrations klaim
 python manage.py migrate
 ```
 
-Di deployment, jalankan `python manage.py collectstatic` (WhiteNoise) dan atur `LOGIN_URL` ke halaman login tim.
+Di deployment, jalankan `python manage.py collectstatic` (WhiteNoise), atur `LOGIN_URL` ke halaman login tim, dan akses lewat HTTPS (Geolocation API ditolak browser di koneksi tidak aman, kecuali `localhost`).
 
+### Data uji
 
-Alur uji:
+Cara termudah adalah mendaftar lewat halaman `daftar/` modul profil (satu akun donor dan satu akun penerima). Atau buat lewat `python manage.py shell`:
+
+```python
+from django.contrib.auth import get_user_model
+from profil.models import ProfilDonor, ProfilPenerima
+U = get_user_model()
+
+donor = U.objects.create_user("demo_donor", password="demo12345")
+ProfilDonor.objects.create(
+    user=donor, nama_unit="BEM Fasilkom UI", jenis="himpunan",
+    kontak="bem@example.com",
+)
+
+recipient = U.objects.create_user("demo_recipient", password="demo12345")
+ProfilPenerima.objects.create(
+    user=recipient, nama_lengkap="Rina Sari", nim="2506000001",
+    fakultas="fasilkom", kontak="rina@example.com",
+)
+```
+
+Untuk mencoba jarak, buat venue yang namanya sama dengan lokasi donasi (misalnya lewat `python manage.py seed_venue` atau halaman `/venue/tambah/`).
+
+Alur uji manual:
 
 1. Login donor, buat donasi di `/donasi/buat/` (batas ambil beberapa jam ke depan, porsi misalnya 10).
 2. Login penerima, buka `/klaim/create/<id donasi>/`, lalu kirim klaim. Stok donasi berkurang. Di detail klaim, kolom Donor berisi nama unit.
-3. Cek `/klaim/` (status Menunggu, tombol *Lihat detail*) dan detail klaim (kode ambil, tombol *Batalkan klaim*).
-4. Login donor, buka `/klaim/incoming/`. Penerima tampil sebagai `Rina Sari (2506 xxxx)`. Klik **Setujui**, isi kode salah lalu kode benar.
-5. Cek ulang sebagai penerima: status *Sudah diambil* dan tombol batalkan hilang.
-6. Uji batal: klaim baru lalu batalkan, stok donasi kembali.
-7. Uji peran: sebagai donor, tombol Klaim tidak muncul di daftar donasi. Akun tanpa profil melihat tombol nonaktif dan diarahkan ke halaman profil.
+3. Pilih moda di kartu lokasi, lalu cek jarak dan tautan peta.
+4. Cek `/klaim/` (status Menunggu, tombol *Lihat detail*) dan detail klaim (kode ambil, tombol *Batalkan klaim*).
+5. Login donor, buka `/klaim/incoming/`. Penerima tampil sebagai `Rina Sari (2506 xxxx)`. Klik **Setujui**, isi kode salah lalu kode benar.
+6. Cek ulang sebagai penerima: status *Sudah diambil* dan tombol batalkan hilang.
+7. Uji batal: klaim baru lalu batalkan, stok donasi kembali.
+8. Uji peran: sebagai donor, tombol Klaim tidak muncul di daftar donasi. Klaim donasi yang sudah kamu klaim memunculkan popover, tanpa pindah halaman.
+
+## Pengujian otomatis
+
+```powershell
+python manage.py test klaim
+```
+
+Test ada di `klaim/tests.py` dan memakai database test terpisah, jadi data lokal aman. Cakupannya:
+
+| Bagian | Yang diuji |
+|---|---|
+| Utilitas | Format dan normalisasi kode ambil, slot 30 menit (pembulatan, batas deadline, mulai tersedia, batas jumlah), format tanggal dan jarak |
+| Model | Status dan properti (`is_overdue`, `can_cancel`, `display_status`), timeline, constraint database (satu klaim `pending` per donasi, batas 1 sampai 3 porsi) |
+| Membuat klaim | Snapshot donasi, pengurangan stok, batas 3 porsi, tidak melebihi stok, donasi habis atau lewat batas, klaim ganda, donor tidak bisa klaim donasinya sendiri, validasi waktu ambil, klaim kedaluwarsa melepas porsi sebelum klaim baru |
+| Membatalkan | Porsi kembali, tidak bisa dibatalkan dua kali atau setelah diambil, klaim overdue menjadi kedaluwarsa |
+| Verifikasi kode | Kode benar atau salah, kode tidak peka huruf besar, kode tidak bisa dipakai dua kali, klaim batal atau kedaluwarsa ditolak, stok tidak berubah saat diambil |
+| Kedaluwarsa | Porsi kembali, idempoten, tidak menyentuh klaim aktif atau selesai, filter per donasi, perintah `expire_claims` |
+| View penerima | Wajib login, form klaim, validasi form, redirect, daftar dengan filter dan paginasi, detail hanya milik sendiri, pembatalan lewat POST dengan `next` yang aman |
+| View donor | Hanya donor yang bisa membuka Klaim Masuk, NIM disamarkan, kartu ringkasan, endpoint verifikasi (JSON, 400, 403, 404) |
+| Integrasi | Peran dari profil, nama tampilan, adapter donasi, tag `claim_button` (donor, popover, anonim), pencocokan venue, kartu lokasi |
+
+Catatan:
+
+- Test yang butuh venue otomatis dilewati kalau app `venue` tidak terpasang.
+- Test memakai penyimpanan static biasa, jadi `collectstatic` tidak diperlukan.
+- Perlindungan klaim bersamaan lewat `select_for_update()` baru berlaku di PostgreSQL. SQLite lokal tidak punya kunci baris, jadi aturan yang sama diuji secara berurutan.
+- Rute OSRM, Geolocation, dan popover adalah perilaku browser (JavaScript) dan belum diuji otomatis.
 
 ## Catatan untuk tim
 
 - **Modul donasi (penting):** `donasi/permissions.py` menentukan donor lewat grup Django `Donor`, sedangkan pendaftaran di `profil` tidak menambahkan grup itu. Akibatnya donor yang daftar lewat profil tidak bisa membuat donasi. Usul: `is_donor` di donasi memakai `hasattr(user, "profil_donor")` atau superuser, supaya satu sumber kebenaran dengan klaim.
 - **Modul donasi:** `jumlah_porsi` kini berarti stok sisa. Label di form edit sebaiknya "Sisa porsi". Panggil `expire_overdue_claims()` di view daftar dan detail donasi, atau jadwalkan `expire_claims`, agar porsi klaim kedaluwarsa cepat kembali.
 - **Hapus donasi:** karena `donation_id` bukan ForeignKey, `ProtectedError` tidak terpicu. Cek dulu `Claim.objects.filter(donation_id=pk, status="pending").exists()` sebelum menghapus.
+- **Venue:** `Donasi.lokasi` adalah teks yang dicocokkan ke `Venue.nama`. Kalau venue diganti namanya atau dihapus, jarak klaim lama menjadi `-`. Kalau nanti `Donasi` memakai ForeignKey ke `Venue`, ubah `get_location_point` di `integrations.py`.
 - **Modul laporan:** data dampak dari `Claim.objects.filter(status="picked_up")`, misalnya `Sum("portions")`.
-- **Modul venue:** jika lokasi pindah ke model venue, ubah satu baris `FIELD_MAP["pickup_location"]`, dan `distance_km` bisa diisi di sana juga.
 
 ## Keterbatasan saat ini
+- Jarak memakai pencocokan nama teks ke venue, dan pilihan moda disimpan terpisah dari halaman venue (kunci `sessionStorage` berbeda).
 
-- Klaim yang dibuat sebelum integrasi profil tetap menampilkan nama donor lama, karena nama donor disimpan sebagai snapshot saat klaim dibuat.
-- Jarak ke lokasi belum tersedia (`distance_km` kosong) sampai modul venue siap.
-- Belum ada unit test untuk aturan bisnis (overbooking, klaim ganda, hak akses, kedaluwarsa).
+## Penggunaan AI
+Pengembangan modul ini memanfaatkan **Claude (Anthropic)** sebagai alat bantu dalam proses perencanaan, penulisan kode, penyempurnaan implementasi, dan debugging. AI digunakan secara interaktif dengan memberikan brief mengenai kebutuhan fitur, meminta rekomendasi pendekatan teknis, serta mengembangkan kode berdasarkan hasil diskusi dan kebutuhan implementasi.
+
+### Bentuk penggunaan
+1. Perencanaan implementasi fitur
+   Memberikan penjelasan terperinci mengenai alur dan kebutuhan fitur untuk memperoleh gambaran komponen yang perlu dikembangkan. Claude membantu menguraikan kebutuhan tersebut menjadi langkah implementasi, termasuk menentukan struktur file, pembagian fungsi backend dan frontend, serta komponen yang diperlukan.
+
+2. Penulisan dan pengembangan kode
+   Memanfaatkan Claude untuk menghasilkan kode awal, memberikan contoh implementasi, dan menyempurnakan kode berdasarkan kebutuhan tampilan maupun fungsionalitas tertentu. Misalnya, pada pengembangan section informasi lokasi di halaman detail klaim, Claude membantu menyusun implementasi dropdown untuk memilih moda transportasi, termasuk struktur HTML, logika JavaScript, dan styling CSS.
+
+3. Debugging dan perbaikan implementasi
+   Memberikan potongan kode, pesan error, maupun deskripsi perilaku fitur yang tidak sesuai untuk dianalisis. Claude membantu mengidentifikasi kemungkinan penyebab masalah, memberikan alternatif solusi, serta menyarankan perubahan pada bagian kode yang berkaitan.
+
+4. Penyesuaian antarmuka berdasarkan Figma
+   Menggunakan gambar desain Figma sebagai referensi visual untuk membantu menyesuaikan hasil implementasi dengan rancangan antarmuka. Claude membantu mengidentifikasi ketidaksesuaian layout dan memberikan rekomendasi perubahan pada struktur elemen, CSS, spacing, alignment, dan komponen lainnya.
+
+### Contoh penggunaan
+
+| Aktivitas | Instruksi kepada Claude | Hasil penggunaan |
+| --- | --- | --- |
+| Perencanaan fitur | Memberikan brief alur fitur dan meminta rincian kebutuhan implementasinya. | Rancangan struktur file, komponen, dan tahapan pengerjaan. |
+| Pengembangan UI | Meminta implementasi dropdown moda transportasi pada informasi lokasi di halaman detail klaim. | Kode awal HTML, JavaScript, dan CSS untuk komponen dropdown. |
+| Penyesuaian layout | Memberikan screenshot Figma dan hasil implementasi yang belum sesuai. | Rekomendasi serta penyesuaian kode untuk menyelaraskan tampilan dengan desain. |
+| Debugging | Memberikan kode dan pesan error untuk dianalisis. | Identifikasi kemungkinan penyebab masalah dan kode perbaikannya. |
+
+### Peninjauan implementasi
+
+Kode dan rekomendasi yang dihasilkan Claude digunakan sebagai bagian dari proses pengembangan dan disesuaikan dengan kebutuhan serta struktur proyek yang sudah ada. Setiap implementasi tetap memerlukan pemeriksaan untuk memastikan kesesuaian dengan alur fitur, keterkaitan antarmodul, dan hasil yang diharapkan. Pengujian serta debugging dilakukan kembali apabila ditemukan ketidaksesuaian.

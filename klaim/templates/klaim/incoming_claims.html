@@ -41,7 +41,7 @@
                     <tbody>
                         {% for claim in page_obj %}
                         {% with display_name=claim.recipient|profile_name display_label=claim.recipient|profile_label %}                        <tr>
-                            <td>{{ display_name }}</td>
+                            <td>{{ display_label }}</td>
                             <td>
                                 {{ claim.food_name }}
                                 {% if claim.note %}<span class="claim-table__note">Catatan: {{ claim.note }}</span>{% endif %}
@@ -54,7 +54,7 @@
                                 <button type="button" class="claim-btn claim-btn--forest claim-btn--sm"
                                         data-verify-open
                                         data-verify-url="{% url 'klaim:claim_verify_code' claim.pk %}"
-                                        data-recipient="{{ recipient_name }}">Setujui</button>
+                                        data-recipient="{{ display_name }}">Setujui</button>
                                 {% elif claim.display_status == 'picked_up' %}
                                 <span class="claim-muted-text">Selesai</span>
                                 {% else %}

@@ -1,0 +1,21 @@
+{% if point %}
+<dt>Rute</dt>
+<dd>
+    <span class="distance-select-wrap">
+        <select class="distance-select" data-distance-select aria-label="Pilih moda perjalanan">
+            <option value="" selected>Pilih moda</option>
+            <option value="foot">Jalan kaki</option>
+            <option value="bike">Sepeda</option>
+            <option value="car">Motor / mobil</option>
+        </select>
+    </span>
+</dd>
+<dt>Jarak</dt>
+<dd>
+    <span data-distance-value data-lat="{{ point.lat }}" data-lng="{{ point.lng }}"{% if campus %} data-origin-lat="{{ campus.lat }}" data-origin-lng="{{ campus.lng }}"{% endif %}>Pilih moda</span>
+    <small class="distance-note" data-distance-note hidden></small>
+</dd>
+{% else %}
+<dt>Jarak</dt>
+<dd>-</dd>
+{% endif %}

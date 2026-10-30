@@ -1,4 +1,5 @@
 {% extends 'donasi/base.html' %}
+{% load claim_extras %}
 {# Halaman detail Donasi: menampilkan makanan, porsi, lokasi, donor, dan aksi yang diizinkan. #}
 {% load static %}
 
@@ -140,4 +141,9 @@
 {% if can_edit %}
   {% include 'donasi/partials/delete_modal.html' %}
 {% endif %}
+  
+{% endblock %}
+  
+{% block extra_scripts %}
+{% claim_button_scripts %}
 {% endblock %}

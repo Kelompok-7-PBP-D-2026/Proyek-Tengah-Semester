@@ -1,4 +1,5 @@
 {% extends 'donasi/base.html' %}
+{% load claim_extras %}
 {# Halaman daftar Donasi: menampilkan pencarian, filter, dan kumpulan kartu makanan. #}
 
 {% block content %}
@@ -110,4 +111,9 @@
     {% include 'donasi/partials/results.html' %}
   </div>
 </section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% claim_button_scripts %}
 {% endblock %}

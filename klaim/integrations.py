@@ -1,4 +1,10 @@
+"""Single adapter between the klaim app and the donation, profile, and venue modules.
 
+Everything that touches the donation model (donasi), the user profiles (profil),
+or the venues (venue), all owned by other team members, lives in this file.
+Field names below were verified against donasi/models.py, profil/models.py,
+and venue/models.py.
+"""
 import logging
 from dataclasses import dataclass
 from datetime import timedelta
@@ -14,18 +20,28 @@ from .utils import ensure_aware, next_slot_start
 
 logger = logging.getLogger(__name__)
 
+# ---- donation module (donasi) ---------------------------------------------
 
+# "app_label.ModelName" of the donation model.
 DONATION_MODEL = "donasi.Donasi"
 
+# Maps our keys to attribute paths on the donation model.
+# Dotted paths (e.g. "donor.profil_donor.nama_unit") and zero-argument
+# callables/properties work, except "available_portions", which must be a plain
+# model field (it is written to). A path that cannot be resolved is treated as
+# missing, and optional keys then fall back to a default.
 FIELD_MAP = {
     "id": "pk",
     "food_name": "nama",
+    # Organisation name from the donor's profile; falls back to the owner's name.
     "donor_name": "donor.profil_donor.nama_unit",
     "pickup_location": "lokasi",
     "pickup_start": "waktu_tersedia",
     "pickup_deadline": "waktu_akhir_pengambilan",
+    # REMAINING stock. Claims subtract from it, cancel/expire add back.
     "available_portions": "jumlah_porsi",
     "owner_id": "donor_id",
+    # Distance is not stored: it is computed in the browser (see claim_distance.js).
     "distance_km": None,
 }
 REQUIRED_FIELDS = (
@@ -33,19 +49,37 @@ REQUIRED_FIELDS = (
     "available_portions", "owner_id",
 )
 
-DONATION_DETAIL_URL_NAME = "donasi:detail" 
+# URL names in the donation app.
+DONATION_DETAIL_URL_NAME = "donasi:detail"  # takes pk
 DONATION_LIST_URL_NAME = "donasi:daftar"
 
+# Demo mode (DEBUG only, when the donation model is not installed).
 DEMO_DONOR_USERNAME = "demo_donor"
 
+# ---- profile module (profil) ----------------------------------------------
+
+# Reverse OneToOne names defined in profil/models.py.
 DONOR_PROFILE_ATTR = "profil_donor"
 RECIPIENT_PROFILE_ATTR = "profil_penerima"
 PROFILE_URL_NAME = "profil:profil_saya"
 
+# Set to True to require admin verification ("terverifikasi") before acting.
 REQUIRE_VERIFIED_DONOR = False
 REQUIRE_VERIFIED_RECIPIENT = False
 
+# Donors see a masked NIM like "2506 xxxx". Set to None to show the full NIM.
 NIM_VISIBLE_DIGITS = 4
+
+# ---- venue module (venue) ---------------------------------------------------
+
+# Donasi.lokasi stores the venue name as text, so a claim's pickup_location is
+# matched to Venue.nama (case-insensitive). If two venues share a name across
+# faculties, the one with the lowest id is used.
+VENUE_MODEL = "venue.Venue"
+VENUE_NAME_FIELD = "nama"
+VENUE_LATITUDE_FIELD = "latitude"
+VENUE_LONGITUDE_FIELD = "longitude"
+VENUE_DETAIL_URL_NAME = "venue:detail"  
 
 _MISSING = object()
 
@@ -64,6 +98,8 @@ class DonationInfo:
     pickup_start: object = None
     distance_km: object = None
 
+
+# ---- roles and display names ------------------------------------------------
 
 def _get_profile(user, attr):
     """Return a related profile, or None when the user has none.
@@ -152,6 +188,8 @@ def get_recipient_label(user):
         return name
     return f"{name} ({mask_nim(profile.nim)})"
 
+
+# ---- donation access --------------------------------------------------------
 
 def _get_donation_model():
     """Return the donation model class, or None when it is not installed."""
@@ -284,6 +322,61 @@ def adjust_portions(donation_id, delta):
     model._default_manager.filter(pk=donation_id).update(**{field: F(field) + delta})
 
 
+# ---- venue access -----------------------------------------------------------
+
+def _get_venue_model():
+    """Return the venue model class, or None when it is not installed."""
+    try:
+        return apps.get_model(VENUE_MODEL)
+    except (LookupError, ValueError):
+        return None
+
+
+def get_location_point(location_name):
+    """Return the venue point for a pickup location, or None.
+
+    Result: {'lat': '-6.364500', 'lng': '106.828700', 'url': '/venue/3/'}.
+    The coordinates are strings with a dot as decimal separator so they can be put
+    safely in HTML data attributes regardless of the active locale. `url` is the
+    venue detail page (map and route), or None when that route is unavailable.
+    Returns None when the venue module is missing, the name is empty, or no
+    venue matches.
+    """
+    model = _get_venue_model()
+    name = (location_name or "").strip()
+    if model is None or not name:
+        return None
+    venue = (
+        model._default_manager.filter(**{f"{VENUE_NAME_FIELD}__iexact": name})
+        .order_by("pk")
+        .first()
+    )
+    if venue is None:
+        return None
+    lat = getattr(venue, VENUE_LATITUDE_FIELD, None)
+    lng = getattr(venue, VENUE_LONGITUDE_FIELD, None)
+    if lat is None or lng is None:
+        return None
+    return {
+        "lat": f"{float(lat):.6f}",
+        "lng": f"{float(lng):.6f}",
+        "url": _safe_reverse(VENUE_DETAIL_URL_NAME, venue.pk),
+    }
+
+def get_campus_center():
+    """Return the campus center as {'lat': ..., 'lng': ...} strings, or None.
+
+    Used as the fallback start point when the browser cannot share the viewer's
+    location. Reuses the venue module's CAMPUS_CENTER.
+    """
+    try:
+        from venue.utils import CAMPUS_CENTER
+    except ImportError:
+        return None
+    return {"lat": f"{CAMPUS_CENTER[0]:.6f}", "lng": f"{CAMPUS_CENTER[1]:.6f}"}
+
+
+# ---- URLs -------------------------------------------------------------------
 
 def _safe_reverse(url_name, *args):
     """Reverse a URL name defensively; return None when unavailable."""

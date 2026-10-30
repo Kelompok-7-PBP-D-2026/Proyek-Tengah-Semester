@@ -66,12 +66,13 @@
                         <dt>Makanan</dt><dd>{{ claim.food_name }}</dd>
                         <dt>Jumlah porsi</dt><dd>{{ claim.portions }} porsi</dd>
                         <dt>Donor</dt><dd>{{ claim.donor_name }}</dd>
-                        <dt>Lokasi</dt><dd>{{ claim.pickup_location }}</dd>
                         <dt>Waktu ambil</dt><dd>{{ claim.pickup_time|id_datetime }}</dd>
                         <dt>Batas ambil</dt><dd>{{ claim.expires_at|id_datetime }}</dd>
                         {% if claim.note %}<dt>Catatan</dt><dd>{{ claim.note }}</dd>{% endif %}
                     </dl>
                 </section>
+
+                {% claim_location_card claim.pickup_location claim.can_cancel %}
 
                 <div class="claim-side-actions">
                     {% if donation_detail_url %}
@@ -89,9 +90,9 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="{% static 'klaim/js/claim.js' %}" defer></script>
+<script src="{% static 'klaim/js/claim_distance.js' %}" defer></script>
 {% endblock %}

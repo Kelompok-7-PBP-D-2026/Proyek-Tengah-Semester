@@ -3,22 +3,50 @@
 {% block title %}{{ donor.nama_unit }} — MBG{% endblock %}
 
 {% block content %}
-<section class="container py-5" style="max-width: 44rem;">
-    <a class="small text-forest" href="{% url 'profil:daftar_donor' %}">&larr; Kembali ke daftar donor</a>
-    <div class="card shadow-sm mt-3">
-        <div class="card-body p-4">
-            <span class="chip mb-3">{{ donor.get_jenis_display }}</span>
-            <h1 class="font-display h4 text-forest">{{ donor.nama_unit }}</h1>
-            <p class="text-muted">{{ donor.deskripsi|default:"Belum ada deskripsi." }}</p>
+{% comment %}
+Halaman detail donor. Figma tidak punya mockup khusus untuk layar ini
+(di desain 1D kartu donor berhenti di tombol "Lihat profil"), jadi halaman ini
+memakai komponen yang sama: avatar, chip, dan daftar label-nilai.
 
-            <h2 class="h6 text-forest mt-4">Kontak penanggung jawab</h2>
-            {% if user.is_authenticated %}
-                <p class="mb-0">{{ donor.kontak }}</p>
-            {% else %}
-                <div class="alert alert-warning mb-0 py-2 small">
-                    Kontak hanya bisa dilihat pengguna yang sudah masuk.
-                    <a href="{% url 'login' %}?next={{ request.path }}" class="fw-semibold">Masuk dulu</a>.
+Kontak hanya tampil untuk pengguna yang sudah masuk, tamu diarahkan login.
+{% endcomment %}
+<section class="mbg-page py-5">
+    <div class="container" style="max-width: 46rem;">
+        <p class="mbg-breadcrumb mb-3">
+            <a href="{% url 'profil:daftar_donor' %}">Daftar donor</a> &rsaquo; {{ donor.nama_unit }}
+        </p>
+
+        <div class="mbg-card">
+            <div class="mbg-profile-card">
+                <span class="mbg-avatar">{{ donor.inisial }}</span>
+                <h1 class="mbg-profile-card__name">{{ donor.nama_unit }}</h1>
+                <div class="mbg-chip-row">
+                    <span class="mbg-chip mbg-chip--idle">{{ donor.get_jenis_display }}</span>
+                    {% if donor.terverifikasi %}
+                    <span class="mbg-chip mbg-chip--success">Terverifikasi</span>
+                    {% endif %}
                 </div>
+            </div>
+
+            <dl class="mbg-info-list">
+                <div class="mbg-info-row">
+                    <dt>Kontak</dt>
+                    <dd>
+                        {% if user.is_authenticated %}
+                            {{ donor.kontak|default:"Belum diisi" }}
+                        {% else %}
+                            Masuk dulu untuk melihat kontak.
+                        {% endif %}
+                    </dd>
+                </div>
+                <div class="mbg-info-row"><dt>Jenis donor</dt><dd>{{ donor.get_jenis_display }}</dd></div>
+                <div class="mbg-info-row"><dt>Bio</dt><dd>{{ donor.deskripsi|default:"Belum diisi" }}</dd></div>
+            </dl>
+
+            {% if not user.is_authenticated %}
+            <div>
+                <a class="btn btn-mbg-carrot" href="{% url 'login' %}?next={{ request.path|urlencode }}">Masuk untuk hubungi donor</a>
+            </div>
             {% endif %}
         </div>
     </div>

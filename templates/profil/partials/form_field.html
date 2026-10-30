@@ -1,0 +1,15 @@
+{% comment %}
+Satu field form dengan gaya komponen Input Figma (label Poppins Bold 13 forest,
+field min-height 48 dengan border 2px border/default, teks bantu Poppins Bold 13
+muted, error border Tomato).
+
+Dipakai dengan: {% include "profil/partials/form_field.html" with field=form.username %}
+Tambahkan wide=1 untuk field yang mau selebar grid (mis. textarea), atau
+label="Kata sandi" untuk menimpa label bawaan form.
+{% endcomment %}
+<div class="mbg-field {% if wide %}mbg-field--wide{% endif %} {% if field.errors %}mbg-field--error{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ label|default:field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<div class="mbg-help">{{ field.help_text|safe }}</div>{% endif %}
+    {% for error in field.errors %}<p class="mbg-error">{{ error }}</p>{% endfor %}
+</div>

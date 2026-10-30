@@ -1,4 +1,4 @@
-# Modul Donasi Makanan — Rindu Maharani Nadhirah
+# Modul Donasi Makanan - Rindu Maharani Nadhirah
 
 Modul donasi MBG dibuat dengan Django MVT, Bootstrap 5, HTMX, dan JavaScript `fetch`.
 Desain mengacu ke [Figma Modul 2](https://www.figma.com/design/MT2ZypZ7HGnSp8RB2AaWKt/Untitled?node-id=94-90).
@@ -19,7 +19,7 @@ python manage.py runserver
 
 Buka `http://127.0.0.1:8000/donasi/`. Akun donor dapat dibuat melalui halaman
 pendaftaran aplikasi. Hak akses donor mengikuti keberadaan `ProfilDonor` dari
-modul profil; tidak perlu membuat superuser khusus untuk memakai modul donasi.
+modul profil. Tidak perlu membuat superuser khusus untuk memakai modul donasi.
 
 ## Fitur utama
 
@@ -35,7 +35,7 @@ modul profil; tidak perlu membuat superuser khusus untuk memakai modul donasi.
 
 ## Aturan data dan validasi
 
-- `jumlah_porsi` adalah stok saat ini. Donasi baru minimal 1 porsi; saat diedit,
+- `jumlah_porsi` adalah stok saat ini. Donasi baru minimal 1 porsi. Saat diedit,
   nilai 0 berarti stok sudah habis.
 - Tidak ada input status manual. Status **Tersedia** atau **Habis** dihitung dari
   stok, sedangkan **Pengambilan selesai** dihitung dari waktu akhir.
@@ -47,11 +47,11 @@ modul profil; tidak perlu membuat superuser khusus untuk memakai modul donasi.
 - Lokasi dipilih dari data Venue agar nama lokasi, peta OpenStreetMap, dan daftar
   donasi pada detail venue tetap sinkron.
 - Kesalahan form dikembalikan oleh `ModelForm` dan ditampilkan melalui toast.
-- Pemilik selalu diambil dari `request.user`; donor tidak dapat mengubah pemilik
+- Pemilik selalu diambil dari `request.user`. Donor tidak dapat mengubah pemilik
   melalui isi form atau URL.
 - Klaim yang melewati batas diproses saat daftar/detail donasi dibuka, sehingga
   porsinya langsung kembali ke stok.
-- Admin tidak otomatis menjadi donor; pengelolaan donasi membutuhkan `ProfilDonor`.
+- Admin tidak otomatis menjadi donor. Pengelolaan donasi membutuhkan `ProfilDonor`.
 
 Waktu form dan tampilan donasi memakai WIB secara lokal di app `donasi`, tanpa
 mengubah konfigurasi timezone milik seluruh proyek.
@@ -60,7 +60,7 @@ mengubah konfigurasi timezone milik seluruh proyek.
 
 | URL | Metode | Fungsi |
 | --- | --- | --- |
-| `/donasi/` | GET | Daftar HTML; request HTMX mengembalikan partial hasil |
+| `/donasi/` | GET | Daftar HTML. Request HTMX mengembalikan partial hasil. |
 | `/donasi/api/` | GET | Data donasi dalam JSON dan pagination |
 | `/donasi/<id>/` | GET | Detail HTML atau JSON |
 | `/donasi/buat/` | GET, POST | Form dan pembuatan donasi |
@@ -88,7 +88,7 @@ Alur request utama:
 
 1. URL Donasi memilih fungsi di `views.py`.
 2. View memeriksa role dan kepemilikan data sebelum operasi pengelolaan.
-3. `DonasiForm` memvalidasi input; model menjaga aturan data yang tetap berlaku di
+3. `DonasiForm` memvalidasi input. Model menjaga aturan data yang tetap berlaku di
    luar form.
 4. Request biasa menerima halaman lengkap. Request HTMX menerima partial daftar,
    sedangkan AJAX CRUD menerima JSON.
@@ -144,22 +144,22 @@ pemeriksaan.
 Prompt diberikan bersama konteks rubrik, tutorial PBP, desain Figma, struktur repo,
 dan kontrak data dengan Profil, Venue, serta Klaim. AI selalu diarahkan untuk:
 
-- mengubah hanya app Donasi kecuali perubahan file bersama sudah disetujui;
-- memakai pola Django dan JavaScript yang sudah dipelajari;
-- menjaga kode tetap sederhana dan memberi komentar hanya pada logika penting;
+- mengubah hanya app Donasi kecuali perubahan file bersama sudah disetujui
+- memakai pola Django dan JavaScript yang sudah dipelajari
+- menjaga kode tetap sederhana dan memberi komentar hanya pada logika penting
 - memvalidasi perubahan melalui test, coverage, Django system check, dan pemeriksaan
-  JavaScript.
+  JavaScript
 
 Contoh penerapannya:
 
-| Tujuan | Contoh prompting | Hasil bantuan AI | Peninjauan dan perbaikan manual |
+| Tujuan | Contoh prompt | Hasil bantuan AI | Peninjauan dan perbaikan manual |
 | --- | --- | --- | --- |
-| Validasi data | “Audit validasi stok dan waktu pengambilan Donasi berdasarkan ketentuan tugas.” | Saran validasi lintas-field dan skenario error. | Pesan error disesuaikan dengan istilah aplikasi dan logika dijaga tetap memakai `ModelForm.clean()`. |
-| Authorization | “Pastikan donor hanya dapat mengubah donasinya sendiri dan berikan respons yang sesuai untuk HTML dan AJAX.” | Rancangan pemeriksaan role, ownership, serta respons 401/403. | Alur session, CSRF, dan query berdasarkan pemilik diperiksa kembali melalui negative test. |
-| Interaktivitas | “Gunakan HTMX untuk filter dan pagination, serta `fetch` untuk form CRUD tanpa menghilangkan fallback HTML.” | Struktur partial template, respons JSON, dan toast. | JavaScript disederhanakan, fallback tanpa JavaScript dipertahankan, dan interaksi diuji melalui browser. |
-| Integrasi modul | “Cocokkan Donasi dengan model Profil, Venue, dan Klaim yang sudah ada di repository.” | Pemetaan role, lokasi, stok, dan data klaim. | Implementasi disesuaikan kembali setelah kode tiap modul digabung agar memakai field dan route yang sebenarnya. |
-| Desain antarmuka | “Sesuaikan card dan detail Donasi dengan Figma serta design system bersama.” | Rancangan template dan CSS responsif. | Tampilan dibandingkan dengan Figma, lalu header/footer khusus diganti dengan template bersama agar konsisten. |
-| Pengujian | “Tambahkan regression test untuk validasi, izin akses, AJAX, HTMX, dan integrasi.” | Daftar skenario positif dan negatif. | Test disederhanakan ke pola `TestCase` dan Django test client, lalu coverage dan seluruh test dijalankan ulang. |
+| Validasi data | `Audit validasi stok dan waktu pengambilan Donasi berdasarkan ketentuan tugas.` | Saran validasi antarfield dan skenario error. | Pesan error disesuaikan dengan istilah aplikasi. Logika tetap memakai `ModelForm.clean()`. |
+| Authorization | `Pastikan donor hanya dapat mengubah donasinya sendiri dan berikan response yang sesuai untuk HTML dan AJAX.` | Rancangan pemeriksaan role, ownership, dan response 401/403. | Alur session, CSRF, dan query pemilik diperiksa kembali melalui negative test. |
+| Interaktivitas | `Gunakan HTMX untuk filter dan pagination serta fetch untuk form CRUD tanpa menghilangkan fallback HTML.` | Struktur partial template, response JSON, dan toast. | JavaScript disederhanakan. Fallback tanpa JavaScript dipertahankan dan interaksi diuji melalui browser. |
+| Integrasi modul | `Cocokkan Donasi dengan model Profil, Venue, dan Klaim yang sudah ada di repository.` | Pemetaan role, lokasi, stok, dan data klaim. | Implementasi disesuaikan setelah kode tiap modul digabung agar memakai field dan route yang sebenarnya. |
+| Desain antarmuka | `Sesuaikan card dan detail Donasi dengan Figma dan design system bersama.` | Rancangan template dan CSS responsif. | Tampilan dibandingkan dengan Figma. Header dan footer khusus diganti dengan template bersama agar konsisten. |
+| Pengujian | `Tambahkan regression test untuk validasi, izin akses, AJAX, HTMX, dan integrasi.` | Daftar skenario positif dan negatif. | Test memakai pola `TestCase` dan Django test client. Coverage dan seluruh test dijalankan ulang. |
 
 ### Keterbatasan dan perbaikan manual
 

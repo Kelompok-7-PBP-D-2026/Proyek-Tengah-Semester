@@ -47,12 +47,11 @@ Penjelasan teknis dan AI disclosure ditulis pada README setiap modul. Dokumentas
 ini mencakup tujuan penggunaan AI, contoh prompt, hasil yang digunakan, serta
 peninjauan dan perbaikan manual oleh pengembang.
 
+- [Profil Pengguna](profil/README.md)
 - [Donasi Makanan](donasi/README.md)
 - [Klaim dan Reservasi](klaim/README.md)
 - [Venue dan Lokasi](venue/README.md)
 - [Laporan Dampak](laporan/README.md)
-
-README untuk modul Profil Pengguna akan ditambahkan oleh PIC modul tersebut.
 
 ## Public API yang Digunakan
 

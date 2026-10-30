@@ -3,6 +3,10 @@
 Modul donasi MBG dibuat dengan Django MVT, Bootstrap 5, HTMX, dan JavaScript `fetch`.
 Desain mengacu ke [Figma Modul 2](https://www.figma.com/design/MT2ZypZ7HGnSp8RB2AaWKt/Untitled?node-id=94-90).
 
+Modul ini menjadi sumber data makanan surplus. Donor mengelola stok dan waktu
+pengambilan, penerima membaca donasi yang tersedia lalu membuat klaim melalui modul
+Klaim, sedangkan pilihan lokasi berasal dari modul Venue.
+
 ## Menjalankan
 
 Di direktori yang berisi `manage.py`:
@@ -56,7 +60,7 @@ mengubah konfigurasi timezone milik seluruh proyek.
 
 | URL | Metode | Fungsi |
 | --- | --- | --- |
-| `/donasi/` | GET | Daftar HTML; header JSON mengembalikan partial hasil |
+| `/donasi/` | GET | Daftar HTML; request HTMX mengembalikan partial hasil |
 | `/donasi/api/` | GET | Data donasi dalam JSON dan pagination |
 | `/donasi/<id>/` | GET | Detail HTML atau JSON |
 | `/donasi/buat/` | GET, POST | Form dan pembuatan donasi |
@@ -66,6 +70,30 @@ mengubah konfigurasi timezone milik seluruh proyek.
 
 Parameter daftar: `q`, `lokasi`, `waktu` (`hari_ini`, `besok`, `pekan_ini`),
 `status` (`tersedia`, `habis`), `mine=1`, dan `page`.
+
+## Struktur dan alur kode
+
+| File/folder | Tanggung jawab |
+| --- | --- |
+| `models.py` | Struktur data Donasi, aturan waktu, serta status stok otomatis. |
+| `forms.py` | Field form, pilihan Venue, dan validasi stok, waktu, serta foto. |
+| `permissions.py` | Pemeriksaan role donor dan penerima berdasarkan profil pengguna. |
+| `views.py` | Query/filter, JSON serialization, detail, CRUD, dan pengiriman file foto. |
+| `urls.py` | Pemetaan URL ke view Donasi. |
+| `templates/donasi/` | Halaman dan partial HTML yang dirender Django/HTMX. |
+| `static/donasi/donasi.js` | Tab filter, AJAX CRUD, CSRF, dan toast. |
+| `tests.py` | Regression test model, form, view, security, AJAX, HTMX, dan integrasi. |
+
+Alur request utama:
+
+1. URL Donasi memilih fungsi di `views.py`.
+2. View memeriksa role dan kepemilikan data sebelum operasi pengelolaan.
+3. `DonasiForm` memvalidasi input; model menjaga aturan data yang tetap berlaku di
+   luar form.
+4. Request biasa menerima halaman lengkap. Request HTMX menerima partial daftar,
+   sedangkan AJAX CRUD menerima JSON.
+5. Setelah penyimpanan berhasil, halaman diarahkan ke detail Donasi. Kesalahan
+   validasi ditampilkan sebagai toast tanpa menghilangkan isi form.
 
 ## Hubungan dengan modul kelompok
 
@@ -82,6 +110,63 @@ Parameter daftar: `q`, `lokasi`, `waktu` (`hari_ini`, `besok`, `pekan_ini`),
 Semua halaman donasi memakai `templates/header.html` dan `templates/footer.html`
 bersama. Integrasi ini tidak mengubah file di app `klaim`.
 
+## Keputusan implementasi
+
+- Status tidak disimpan sebagai input terpisah agar tidak bertentangan dengan stok
+  dan waktu. Status dihitung setiap kali data ditampilkan.
+- Nama Venue disimpan sebagai teks sesuai kontrak integrasi kelompok, sementara
+  pilihan form tetap diambil dari database Venue.
+- HTMX dipakai untuk pembacaan/filter daftar, sedangkan `fetch` dipakai untuk
+  pengiriman form CRUD. Form HTML biasa tetap menjadi fallback jika JavaScript mati.
+- Foto dikirim melalui endpoint Donasi agar file media tidak harus dibuka sebagai
+  URL publik langsung.
+- Klaim menyimpan snapshot data Donasi. Perubahan stok tetap dilakukan oleh service
+  Klaim agar satu aturan tidak ditulis ulang di dua modul.
+
+## Penggunaan AI
+
+Pengembangan modul ini menggunakan **OpenAI ChatGPT/Codex** sebagai alat bantu.
+AI tidak menjadi sumber kebenaran tunggal dan hasilnya tidak langsung diterima tanpa
+pemeriksaan.
+
+### Tujuan penggunaan
+
+- Memecah ketentuan tugas dan rubrik menjadi rencana implementasi Donasi.
+- Membantu membuat rancangan awal model, form, view, template, CSS, JavaScript,
+  regression test, dan dokumentasi.
+- Membandingkan implementasi dengan desain Figma serta mencari edge case validasi,
+  authorization, AJAX, HTMX, dan integrasi antarmodul.
+- Membantu menjelaskan kembali alur kode dengan bahasa yang mudah dipelajari untuk
+  demo dan live coding.
+
+### Strategi prompt
+
+Prompt diberikan bersama konteks rubrik, tutorial PBP, desain Figma, struktur repo,
+dan kontrak data dengan Profil, Venue, serta Klaim. AI selalu diarahkan untuk:
+
+- mengubah hanya app Donasi kecuali perubahan file bersama sudah disetujui;
+- memakai pola Django dan JavaScript yang sudah dipelajari;
+- menjaga kode tetap sederhana dan memberi komentar hanya pada logika penting;
+- memvalidasi perubahan melalui test, coverage, Django system check, dan pemeriksaan
+  JavaScript;
+- tidak melakukan push Git, karena push dilakukan sendiri oleh pemilik modul.
+
+### Keterbatasan dan perbaikan manual
+
+- Saran awal AI sempat terlalu kompleks untuk kebutuhan proyek kuliah. Kode dan test
+  kemudian disederhanakan agar memakai `TestCase`, Django test client, `ModelForm`,
+  HTMX, dan `fetch` yang dapat dijelaskan saat live coding.
+- Asumsi awal mengenai field Profil, Venue, dan Klaim berubah setelah kode teman
+  digabung. Kontrak data diperiksa ulang dan implementasi disesuaikan dengan model
+  yang benar-benar ada di repository.
+- Header dan footer khusus Donasi yang sempat dibuat diganti dengan template bersama
+  agar tidak menimpa desain modul lain. Integrasi login khusus Donasi ditangani
+  bersama pemilik modul autentikasi/profil.
+- Konflik Git saat menggabungkan `main` diselesaikan dengan membandingkan perubahan
+  per file, bukan menerima seluruh hasil AI secara otomatis.
+- Validasi akhir tetap dilakukan manual melalui browser, `manage.py check`, cek
+  migrasi, seluruh unit test, coverage, dan pemeriksaan sintaks JavaScript.
+
 ## Pengecekan
 
 ```powershell
@@ -95,6 +180,6 @@ python -m coverage report -m --omit="donasi/test*.py,donasi/migrations/*,donasi/
 node --check donasi/static/donasi/donasi.js
 ```
 
-Saat audit terakhir, 25 tes donasi dan 83 tes seluruh proyek lulus. Coverage kode
+Saat audit terakhir, 25 tes Donasi dan 149 tes seluruh proyek lulus. Coverage kode
 Python inti app donasi adalah 93%. Tes sengaja memakai pola dasar `TestCase`,
 `self.client`, `reverse`, dan assertion Django agar mudah dipahami untuk live coding.

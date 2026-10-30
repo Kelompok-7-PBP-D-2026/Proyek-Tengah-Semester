@@ -3,8 +3,11 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Sum
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+
+from venue.osm import OSMError, cari_alamat
 
 from donasi.models import Donasi
 from .forms import (
@@ -13,6 +16,7 @@ from .forms import (
     ProfilDonorForm,
     ProfilPenerimaForm,
 )
+from .jarak import filter_radius
 from .models import JenisDonor, ProfilDonor, ProfilPenerima
 
 BULAN_INDONESIA = (
@@ -179,7 +183,7 @@ def edit_profil(request):
 
 
 def daftar_donor(request):
-    """Daftar donor + filter jenis (?jenis=) dan pencarian nama unit (?q=).
+    """Daftar donor + filter jenis (?jenis=), pencarian nama unit (?q=), dan radius (?lat=&lng=&radius=).
 
     Permintaan dari HTMX (header HX-Request) hanya dibalas panel hasilnya, supaya
     filter dan pencarian berjalan tanpa memuat ulang halaman.
@@ -193,6 +197,22 @@ def daftar_donor(request):
         jenis = ""
     if kata_kunci:
         donor_qs = donor_qs.filter(nama_unit__icontains=kata_kunci)
+
+    # Filter radius: titik acuan diambil dari lokasi profil donor yang login;
+    # dropdown radius (?radius=) hanya mengaktifkan/mengubah jaraknya.
+    titik = None
+    radius_minta = request.GET.get("radius")
+    radius_aktif = None
+    profil_pengguna = None
+    if request.user.is_authenticated:
+        profil_pengguna = ProfilDonor.objects.filter(user=request.user).first()
+    if profil_pengguna and profil_pengguna.latitude is not None:
+        titik = {"lat": profil_pengguna.latitude, "lng": profil_pengguna.longitude}
+        if radius_minta:
+            donor_qs = filter_radius(donor_qs, titik["lat"], titik["lng"], radius_minta)
+            radius_aktif = radius_minta
+    elif radius_minta:
+        radius_aktif = None  # Tanpa titik acuan, daftar tampil normal + pesan.
 
     # Angka di chip filter dihitung dari seluruh donor (bukan hasil filter),
     # supaya angkanya tidak berubah-ubah saat pengguna memilih kategori.
@@ -215,11 +235,31 @@ def daftar_donor(request):
         "jenis_choices": JenisDonor.choices,
         "chips_jenis": chips_jenis,
         "kata_kunci": kata_kunci,
+        "radius_aktif": radius_aktif,
+        "radius_minta": radius_minta,
+        "titik": titik,
         "jumlah": donor_qs.count(),
     }
     if request.headers.get("HX-Request") == "true":
         return render(request, "profil/partials/daftar_donor_panel.html", context)
     return render(request, "profil/daftar_donor.html", context)
+
+
+def cari_lokasi(request):
+    """Autocomplete alamat dari OpenStreetMap untuk form edit profil donor.
+
+    Endpoint kecil yang jadi konsumen klien Nominatim modul Venue (`venue.osm`).
+    Data yang balik (judul, alamat, lat/lng) dipakai frontend untuk mengisi
+    field tersembunyi latitude/longitude di form.
+    """
+    query = request.GET.get("q", "").strip()
+    if len(query) < 3:
+        return JsonResponse({"hasil": []})
+    try:
+        hasil = cari_alamat(query)
+    except OSMError as exc:
+        return JsonResponse({"error": str(exc)}, status=502)
+    return JsonResponse({"hasil": hasil})
 
 
 def detail_donor(request, pk):

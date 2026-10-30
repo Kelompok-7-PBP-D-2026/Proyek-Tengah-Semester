@@ -144,6 +144,24 @@ Otomatisasi ada di `.github/workflows/ci-cd.yml` dan terdiri dari dua job:
 https://<username-PWS>:<password-PWS>@pws.cs.ui.ac.id/immanuel.marvin/pts-surplus
 ```
 
+## Data Contoh (Seed) di Deployment
+
+Syarat spesifikasi: minimal 50 baris data utama keisi saat deploy. Seed dikirim sebagai
+data migration (`profil/0003`, `donasi/0004`, `venue/0002`, `klaim/0002`) yang **hanya
+mengisi data kalau env var `MBG_SEED_DEMO` bernilai apa pun** di Environs. Tanpa env
+var itu, migration jalan tanpa mengisi apa-apa — database test dan lokal tetap kosong,
+dan suite modul lain tidak terganggu.
+
+Crew deployment: tambahkan satu entri di tab **Environs** PWS:
+
+```
+MBG_SEED_DEMO = 1
+```
+
+Migration `migrate` yang PWS jalankan otomatis setiap deploy akan mengisi ±14 profil
+donor, 11 penerima, 6 venue, 56 donasi, dan 8 klaim (semua idempoten). Kalau nanti
+butuh database bersih di deployment, hapus env var itu lalu tekan redeploy.
+
 Kredensialnya milik akun pemilik proyek PWS, jadi yang bisa mengisi secret ini adalah pemilik proyek sekaligus admin repositori. Username dan password-nya diambil dari dashboard PWS: **Project → Settings → Git Credentials** (Username dan Git Password; password ini hanya tampil sekali, kalau lupa klik **Regenerate**). Ini bukan password SSO. Kalau password mengandung karakter khusus, tulis dalam bentuk URL-encoded (misalnya `@` jadi `%40`, `!` jadi `%21`). **Buat secret ini sebelum workflow di-merge ke `main`**, supaya tidak ada workflow merah yang gagal deploy. Kalau `PWS_URL` masih kosong, job `deploy` tidak gagal — hanya menulis peringatan dan melewati deploy.
 
 Workflow memakai Python 3.13, sama dengan versi di PWS. Setelah workflow aktif, sebaiknya aktifkan juga aturan di **Settings → Branches → Branch protection rule** untuk `main`: wajib lulus status check `Test` sebelum pull request boleh di-merge.

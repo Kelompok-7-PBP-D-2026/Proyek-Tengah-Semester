@@ -39,6 +39,31 @@ saat panel di-swap.
                 <p class="mbg-help-sm">Ketik minimal 2 huruf.</p>
             </div>
         </div>
+
+        <div class="mbg-radius" id="radius-filter">
+            <div class="mbg-field">
+                <label for="filter-radius">Dalam radius</label>
+                <select id="filter-radius" autocomplete="off" hx-preserve="true"
+                        hx-get="{% url 'profil:daftar_donor' %}?jenis={{ jenis_aktif }}{% if kata_kunci %}&amp;q={{ kata_kunci|urlencode }}{% endif %}"
+                        hx-target="#daftar-donor-panel"
+                        hx-swap="outerHTML"
+                        hx-push-url="true"
+                        hx-indicator="#daftar-donor-loading">
+                    <option value="" {% if not radius_aktif %}selected{% endif %}>Semua lokasi</option>
+                    <option value="2" {% if radius_aktif == '2' %}selected{% endif %}>&le; 2 km</option>
+                    <option value="5" {% if radius_aktif == '5' %}selected{% endif %}>&le; 5 km</option>
+                    <option value="10" {% if radius_aktif == '10' %}selected{% endif %}>&le; 10 km</option>
+                    <option value="25" {% if radius_aktif == '25' %}selected{% endif %}>&le; 25 km</option>
+                </select>
+            </div>
+            {% if radius_aktif and titik %}
+            <p class="mbg-help-sm">Jarak dihitung dari lokasi profilmu ({{ titik.lat }}°S, {{ titik.lng }}°E).</p>
+            {% elif radius_minta %}
+            <p class="mbg-help-sm">Isi lokasi di halaman edit profil dulu untuk memakai filter ini.</p>
+            {% else %}
+            <p class="mbg-help-sm">Set lokasi di halaman edit profil, lalu pilih radius.</p>
+            {% endif %}
+        </div>
     </form>
 
     <p class="mbg-help-sm mb-3" aria-live="polite">

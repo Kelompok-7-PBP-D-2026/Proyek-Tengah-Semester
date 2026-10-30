@@ -603,3 +603,41 @@ a.mbg-chip--idle:hover { color: var(--mbg-forest); border-color: var(--mbg-fores
     color: var(--mbg-text-muted);
     margin: 0;
 }
+
+/* Autocomplete lokasi donor (OpenStreetMap) di halaman edit profil */
+.mbg-osm-hasil {
+    border: 2px solid var(--mbg-line, #d8d2c0);
+    border-radius: 12px;
+    background: #fff;
+    margin-top: 0.25rem;
+    overflow: hidden;
+    max-height: 15rem;
+    overflow-y: auto;
+}
+
+.mbg-osm-pilihan {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--mbg-line, #d8d2c0);
+    padding: 0.625rem 0.875rem;
+    cursor: pointer;
+    font: inherit;
+}
+
+.mbg-osm-pilihan:last-child { border-bottom: 0; }
+.mbg-osm-pilihan:hover { background: var(--mbg-cream, #f3e8cc); }
+
+.mbg-osm-pilihan strong { display: block; font-size: 0.9375rem; }
+.mbg-osm-pilihan span { display: block; font-size: 0.8125rem; color: var(--mbg-text-muted, #6b6b60); }
+
+.mbg-osm-kosong {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    color: var(--mbg-text-muted, #6b6b60);
+}
+
+/* Dropdown radius di panel filter daftar donor */
+.mbg-radius { min-width: 12rem; }

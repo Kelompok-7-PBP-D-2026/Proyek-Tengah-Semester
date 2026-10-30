@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
+from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
@@ -131,6 +132,15 @@ class DonasiTests(TestCase):
         self.assertEqual(detail_response.status_code, 200)
         self.assertContains(list_response, self.item.nama)
         self.assertContains(detail_response, self.item.nama)
+
+    def test_list_and_detail_load_donation_and_claim_scripts(self):
+        """Script Donasi tidak boleh hilang saat script Klaim ikut dimuat."""
+        list_response = self.client.get(reverse("donasi:daftar"))
+        detail_response = self.client.get(self.item.get_absolute_url())
+
+        for response in [list_response, detail_response]:
+            self.assertContains(response, static("donasi/donasi.js"))
+            self.assertContains(response, static("klaim/js/claim_popover.js"))
 
     def test_ajax_crud_uses_logged_in_donor(self):
         self.client.force_login(self.owner)

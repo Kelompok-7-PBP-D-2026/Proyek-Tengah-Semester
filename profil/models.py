@@ -24,6 +24,16 @@ class Fakultas(models.TextChoices):
     VOKASI = "vokasi", "Vokasi"
 
 
+def _inisial(nama):
+    """Dua huruf inisial untuk avatar bulat, mis. 'Kantin Fasilkom' -> 'KF'."""
+    kata = [bagian for bagian in str(nama).split() if bagian]
+    if not kata:
+        return "?"
+    if len(kata) == 1:
+        return kata[0][:2].upper()
+    return (kata[0][0] + kata[1][0]).upper()
+
+
 class ProfilDonor(models.Model):
     """Profil penyelenggara acara, kantin, atau katering yang punya makanan surplus."""
 
@@ -54,6 +64,11 @@ class ProfilDonor(models.Model):
         verbose_name = "profil donor"
         verbose_name_plural = "profil donor"
 
+    @property
+    def inisial(self):
+        """Inisial untuk avatar (dipakai template, tidak disimpan di DB)."""
+        return _inisial(self.nama_unit)
+
     def __str__(self):
         return f"{self.nama_unit} ({self.get_jenis_display()})"
 
@@ -82,6 +97,11 @@ class ProfilPenerima(models.Model):
         ordering = ["nama_lengkap"]
         verbose_name = "profil penerima"
         verbose_name_plural = "profil penerima"
+
+    @property
+    def inisial(self):
+        """Inisial untuk avatar (dipakai template, tidak disimpan di DB)."""
+        return _inisial(self.nama_lengkap)
 
     def __str__(self):
         return f"{self.nama_lengkap} ({self.nim})"

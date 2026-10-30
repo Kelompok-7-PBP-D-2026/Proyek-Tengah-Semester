@@ -3,24 +3,58 @@
 {% block title %}Edit Profil — MBG{% endblock %}
 
 {% block content %}
-<section class="container py-5" style="max-width: 36rem;">
-    <a class="small text-forest" href="{% url 'profil:profil_saya' %}">&larr; Kembali ke profil</a>
-    <div class="card shadow-sm mt-3">
-        <div class="card-body p-4">
-            <h1 class="font-display h4 text-forest mb-3">Edit Profil</h1>
-            <form method="post" novalidate>
-                {% csrf_token %}
-                {% for field in form %}
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                    {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+{% comment %}
+Layar "1C Edit Profil" pada page Figma "Modul 1 - Profil Pengguna".
+
+Field yang tampil menyesuaikan peran akun: donor mengisi unit/penyelenggara,
+penerima mengisi data mahasiswa. Field "Peran" dan "NIM" ditampilkan terkunci
+karena mengubahnya butuh alur verifikasi admin, bukan form ini.
+
+Baris "Ganti foto" di desain belum diterapkan: model profil belum punya field
+foto, jadi menambahkannya berarti migrasi baru.
+{% endcomment %}
+<section class="mbg-page py-5">
+    <div class="container">
+        <p class="mbg-breadcrumb mb-3">
+            <a href="{% url 'profil:profil_saya' %}">Profil</a> &rsaquo; Edit profil
+        </p>
+        <h1 class="mbg-caps mb-3">Edit <span class="text-carrot">profil</span></h1>
+        <p class="mbg-lede mb-4">Perubahan langsung tampil di daftar donor.</p>
+
+        {% include "profil/partials/pesan.html" %}
+
+        <form method="post" novalidate class="mbg-card" style="max-width: 52rem;">
+            {% csrf_token %}
+            <h2 class="mbg-card__title">Data {{ peran|lower }}</h2>
+
+            <div class="mbg-form-grid">
+                {% if peran == "Donor" %}
+                {% include "profil/partials/form_field.html" with field=form.nama_unit label="Nama unit / penyelenggara" %}
+                {% include "profil/partials/form_field.html" with field=form.kontak label="Nomor HP atau email" %}
+                {% include "profil/partials/form_field.html" with field=form.jenis label="Jenis donor" %}
+                <div class="mbg-field">
+                    <label for="peran-terkunci">Peran</label>
+                    <input type="text" id="peran-terkunci" value="Donor" disabled>
+                    <p class="mbg-help-sm">Peran tidak bisa diubah sendiri.</p>
                 </div>
-                {% endfor %}
-                <button class="btn btn-mbg-green" type="submit">Simpan</button>
-            </form>
-        </div>
+                {% include "profil/partials/form_field.html" with field=form.deskripsi label="Bio singkat" wide=1 %}
+                {% else %}
+                {% include "profil/partials/form_field.html" with field=form.nama_lengkap label="Nama lengkap" %}
+                {% include "profil/partials/form_field.html" with field=form.kontak label="Nomor HP atau email" %}
+                {% include "profil/partials/form_field.html" with field=form.fakultas label="Fakultas" %}
+                <div class="mbg-field">
+                    <label for="peran-terkunci">Peran</label>
+                    <input type="text" id="peran-terkunci" value="Penerima" disabled>
+                    <p class="mbg-help-sm">Peran tidak bisa diubah sendiri.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <a class="btn btn-mbg-line" href="{% url 'profil:profil_saya' %}">Batal</a>
+                <button class="btn btn-mbg-kiwi" type="submit">Simpan perubahan</button>
+            </div>
+        </form>
     </div>
 </section>
 {% endblock %}

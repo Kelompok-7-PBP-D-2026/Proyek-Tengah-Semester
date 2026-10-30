@@ -3,28 +3,35 @@
 {% block title %}Masuk — MBG{% endblock %}
 
 {% block content %}
-<section class="container py-5" style="max-width: 26rem;">
-    <div class="card shadow-sm">
-        <div class="card-body p-4">
-            <h1 class="font-display h4 text-forest mb-3">Masuk</h1>
+{% comment %}
+Figma tidak punya mockup layar masuk (tombol "Masuk" hanya muncul di navbar),
+jadi halaman ini mengikuti design system page "MBG": eyebrow Carrot, judul
+kapital, kartu putih, komponen Input dan Button yang sama dengan registrasi.
+{% endcomment %}
+<section class="mbg-page py-5">
+    <div class="container" style="max-width: 30rem;">
+        <p class="mbg-eyebrow mb-3">Akun</p>
+        <h1 class="mbg-caps mb-3">Masuk ke <span class="text-carrot">MBG</span></h1>
+        <p class="mbg-lede mb-4">Masuk untuk mengelola donasi atau mengklaim makanan.</p>
+
+        <form method="post" novalidate class="mbg-card">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+
             {% if form.errors %}
-            <div class="alert alert-danger py-2 small">Username atau kata sandi salah.</div>
+            <p class="mbg-error" role="alert">Username atau kata sandi tidak sesuai.</p>
             {% endif %}
-            <form method="post">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ next }}">
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold" for="{{ form.username.id_for_label }}">Username</label>
-                    <input type="text" name="username" id="{{ form.username.id_for_label }}" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold" for="{{ form.password.id_for_label }}">Kata sandi</label>
-                    <input type="password" name="password" id="{{ form.password.id_for_label }}" class="form-control" required>
-                </div>
-                <button class="btn btn-mbg-green w-100" type="submit">Masuk</button>
-            </form>
-            <p class="small text-muted mt-3 mb-0">Belum punya akun? <a class="text-forest fw-semibold" href="{% url 'profil:daftar' %}">Daftar</a></p>
-        </div>
+
+            <div class="mbg-form-grid">
+                {% include "profil/partials/form_field.html" with field=form.username %}
+                {% include "profil/partials/form_field.html" with field=form.password label="Kata sandi" %}
+            </div>
+
+            <div class="mbg-actions">
+                <p class="mbg-help mb-0">Belum punya akun? <a class="text-forest" href="{% url 'profil:daftar' %}">Daftar di sini</a>.</p>
+                <button class="btn btn-mbg-carrot" type="submit">Masuk</button>
+            </div>
+        </form>
     </div>
 </section>
 {% endblock %}

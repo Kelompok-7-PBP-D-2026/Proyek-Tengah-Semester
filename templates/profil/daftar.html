@@ -1,39 +1,89 @@
 {% extends "base.html" %}
 
-{% block title %}Daftar — MBG{% endblock %}
+{% block title %}Daftar Akun — MBG{% endblock %}
 
 {% block content %}
-<section class="container py-5" style="max-width: 36rem;">
-    <div class="card shadow-sm">
-        <div class="card-body p-4">
-            <h1 class="font-display h4 text-forest mb-3">Daftar Akun</h1>
+{% comment %}
+Gaya halaman mengikuti layar "1A-1 Registrasi Donor" dan "1A-2 Registrasi
+Penerima" pada page Figma "Modul 1 - Profil Pengguna": eyebrow Carrot, judul
+kapital Inter Black, dua kartu pemilih peran, lalu satu kartu form bergrid dua
+kolom.
 
-            <ul class="nav nav-pills mb-4 gap-2">
-                <li class="nav-item"><a class="nav-link {% if peran == 'donor' %}active bg-forest{% else %}text-forest{% endif %}" href="?peran=donor">Donor</a></li>
-                <li class="nav-item"><a class="nav-link {% if peran == 'penerima' %}active bg-forest{% else %}text-forest{% endif %}" href="?peran=penerima">Penerima</a></li>
-            </ul>
+Dua penyesuaian yang disengaja terhadap mockup:
+1. Mockup berasumsi alur dua langkah (akun dulu, profil belakangan) sehingga
+   eyebrownya "LANGKAH 2 DARI 2". Di sini akun dan profil dibuat sekali jalan,
+   jadi eyebrownya "DAFTAR AKUN".
+2. Kartu "Data akun" ditambahkan dengan gaya komponen yang sama; mockup tidak
+   memuatnya karena mengasumsikan akun sudah jadi di langkah pertama.
+{% endcomment %}
+<section class="mbg-page py-5">
+    <div class="container" style="max-width: 60rem;">
+        <p class="mbg-eyebrow mb-3">Daftar akun</p>
+        <h1 class="mbg-caps mb-3">Lengkapi <span class="text-carrot">profilmu</span></h1>
+        <p class="mbg-lede mb-4">
+            {% if peran == "penerima" %}
+            Data ini membantu donor mengenali kamu saat pengambilan makanan.
+            {% else %}
+            Data ini membantu penerima mengenali unitmu saat pengambilan makanan.
+            {% endif %}
+        </p>
 
-            <form method="post" novalidate>
-                {% csrf_token %}
-                <input type="hidden" name="peran" value="{{ peran }}">
-
-                {% if form.non_field_errors %}
-                <div class="alert alert-danger small py-2">{{ form.non_field_errors|join:" " }}</div>
-                {% endif %}
-
-                {% for field in form %}
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                    {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
-                </div>
-                {% endfor %}
-
-                <button class="btn btn-mbg-green w-100" type="submit">Daftar</button>
-            </form>
-            <p class="small text-muted mt-3 mb-0">Sudah punya akun? <a class="text-forest fw-semibold" href="{% url 'login' %}">Masuk</a></p>
+        <div class="mbg-role-grid mb-4">
+            <a class="mbg-role {% if peran == 'donor' %}mbg-role--active{% endif %}" href="?peran=donor">
+                {% if peran == 'donor' %}<span class="mbg-chip">Dipilih</span>{% endif %}
+                <span class="mbg-role__title">Aku Donor</span>
+                <span class="mbg-role__desc">Panitia acara, himpunan atau UKM, kantin, atau katering yang punya makanan surplus.</span>
+            </a>
+            <a class="mbg-role {% if peran == 'penerima' %}mbg-role--active{% endif %}" href="?peran=penerima">
+                {% if peran == 'penerima' %}<span class="mbg-chip">Dipilih</span>{% endif %}
+                <span class="mbg-role__title">Aku Penerima</span>
+                <span class="mbg-role__desc">Mahasiswa atau komunitas kampus yang mencari makanan gratis.</span>
+            </a>
         </div>
+
+        <form method="post" novalidate class="mbg-card">
+            {% csrf_token %}
+            <input type="hidden" name="peran" value="{{ peran }}">
+
+            <h2 class="mbg-card__title">Data akun</h2>
+            <div class="mbg-form-grid">
+                {% include "profil/partials/form_field.html" with field=form.username %}
+                {% include "profil/partials/form_field.html" with field=form.email %}
+                {% include "profil/partials/form_field.html" with field=form.password1 %}
+                {% include "profil/partials/form_field.html" with field=form.password2 %}
+            </div>
+
+            <h2 class="mbg-card__title">Data {{ peran }}</h2>
+            <div class="mbg-form-grid">
+                {% if peran == "penerima" %}
+                {% include "profil/partials/form_field.html" with field=form.nama_lengkap %}
+                {% include "profil/partials/form_field.html" with field=form.kontak %}
+                {% include "profil/partials/form_field.html" with field=form.nim %}
+                {% include "profil/partials/form_field.html" with field=form.fakultas %}
+                {% else %}
+                {% include "profil/partials/form_field.html" with field=form.nama_unit %}
+                {% include "profil/partials/form_field.html" with field=form.kontak %}
+                {% include "profil/partials/form_field.html" with field=form.jenis %}
+                {% include "profil/partials/form_field.html" with field=form.deskripsi wide=1 %}
+                {% endif %}
+            </div>
+
+            {% for error in form.non_field_errors %}<p class="mbg-error">{{ error }}</p>{% endfor %}
+
+            <div class="mbg-actions">
+                <p class="mbg-help mb-0">
+                    {% if peran == "penerima" %}
+                    Profil ini dipakai saat kamu mengklaim makanan dan melacak status klaim.
+                    {% else %}
+                    Profil ini dipakai penerima untuk mengenali unitmu sebelum mengambil makanan.
+                    {% endif %}
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a class="btn btn-mbg-line" href="{% url 'login' %}">Sudah punya akun</a>
+                    <button class="btn btn-mbg-carrot" type="submit">Simpan profil</button>
+                </div>
+            </div>
+        </form>
     </div>
 </section>
 {% endblock %}

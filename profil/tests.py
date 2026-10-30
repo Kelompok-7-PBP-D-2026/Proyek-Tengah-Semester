@@ -282,3 +282,80 @@ class ProfilSayaAuthTest(TestCase):
             "deskripsi": "",
         })
         self.assertEqual(ProfilDonor.objects.get(user=user).nama_unit, "Baru")
+
+
+class InisialProfilTest(TestCase):
+    """Properti inisial dipakai avatar bulat di kartu profil dan kartu donor."""
+
+    def test_inisial_mengambil_huruf_awal_dua_kata(self):
+        self.assertEqual(ProfilDonor(nama_unit="Kantin Fasilkom").inisial, "KF")
+
+    def test_inisial_satu_kata_memakai_dua_huruf_pertama(self):
+        self.assertEqual(ProfilDonor(nama_unit="Katering").inisial, "KA")
+
+    def test_inisial_nama_kosong_diberi_tanda_tanya(self):
+        self.assertEqual(ProfilDonor(nama_unit="   ").inisial, "?")
+
+
+class KomponenDesainModul1Test(TestCase):
+    """Komponen desain Modul 1: chip berjumlah, pagination, kartu statistik."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("donor_utama", password="rahasia-123")
+        ProfilDonor.objects.create(
+            user=self.user, nama_unit="Kantin Fasilkom",
+            jenis=JenisDonor.KANTIN, kontak="kantin@x", deskripsi="Kantin fasilkom.",
+        )
+        for nomor in range(11):
+            akun = User.objects.create_user(f"panitia{nomor}", password="rahasia-123")
+            ProfilDonor.objects.create(
+                user=akun, nama_unit=f"Panitia Acara {nomor:02d}",
+                jenis=JenisDonor.PANITIA, kontak="panitia@x",
+            )
+
+    def test_chip_jenis_menyertakan_jumlah_donor(self):
+        response = self.client.get(reverse("profil:daftar_donor"))
+        chips = {chip["nilai"]: chip["jumlah"] for chip in response.context["chips_jenis"]}
+        self.assertEqual(chips[""], 12)
+        self.assertEqual(chips[JenisDonor.KANTIN], 1)
+        self.assertEqual(chips[JenisDonor.PANITIA], 11)
+
+    def test_pagination_membagi_daftar_sembilan_per_halaman(self):
+        halaman_satu = self.client.get(reverse("profil:daftar_donor"))
+        self.assertEqual(len(halaman_satu.context["halaman"].object_list), 9)
+        self.assertEqual(halaman_satu.context["halaman"].paginator.num_pages, 2)
+        halaman_dua = self.client.get(reverse("profil:daftar_donor"), {"page": 2})
+        self.assertEqual(len(halaman_dua.context["halaman"].object_list), 3)
+
+    def test_pagination_ikut_terkirim_di_panel_htmx(self):
+        response = self.client.get(reverse("profil:daftar_donor"), HTTP_HX_REQUEST="true")
+        self.assertContains(response, "mbg-pagination")
+
+    def test_kartu_donor_menampilkan_jumlah_donasi(self):
+        response = self.client.get(reverse("profil:daftar_donor"))
+        self.assertContains(response, "0 donasi tersedia")
+
+    def test_profil_donor_menampilkan_kartu_statistik(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("profil:profil_saya"))
+        self.assertContains(response, "donasi dibuat")
+        self.assertContains(response, "porsi tersedia")
+        self.assertContains(response, "Belum diverifikasi")
+
+
+class KomponenDesainHalamanMasukTest(TestCase):
+    """Halaman masuk dan daftar memakai komponen Figma (kartu, chip, tombol)."""
+
+    def test_halaman_masuk_pakai_kartu_dan_tombol_desain(self):
+        response = self.client.get(reverse("login"))
+        self.assertContains(response, "mbg-card")
+        self.assertContains(response, "btn-mbg-carrot")
+
+    def test_halaman_daftar_menandai_kartu_peran_terpilih(self):
+        response = self.client.get(reverse("profil:daftar"))
+        self.assertContains(response, "mbg-role--active")
+        self.assertContains(response, "Data donor")
+
+    def test_kartu_peran_terpilih_mengikuti_parameter_peran(self):
+        response = self.client.get(reverse("profil:daftar"), {"peran": "penerima"})
+        self.assertContains(response, "Data penerima")

@@ -351,7 +351,17 @@ class DonasiTests(TestCase):
         api_response = self.client.get(reverse("donasi:api_list"), {"mine": "1"})
 
         self.assertEqual(html_response.status_code, 302)
+        self.assertTrue(html_response.url.startswith(f"{reverse('login')}?next="))
         self.assertEqual(api_response.status_code, 401)
+
+    def test_manage_donation_uses_shared_login_page(self):
+        """Pengunjung anonim diarahkan ke login bersama, bukan login khusus Donasi."""
+        response = self.client.get(reverse("donasi:buat"))
+
+        self.assertRedirects(
+            response,
+            f"{reverse('login')}?next={reverse('donasi:buat')}",
+        )
 
     def test_delete_confirmation_and_missing_photo_are_handled(self):
         """GET hapus menampilkan konfirmasi dan foto yang tidak ada menghasilkan 404."""

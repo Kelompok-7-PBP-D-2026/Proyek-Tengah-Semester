@@ -6,8 +6,6 @@ from django.urls import reverse
 from django.utils import timezone
 
 from donasi.models import Donasi
-from klaim.models import Claim, ClaimStatus
-
 from .models import JenisDonor, ProfilDonor, ProfilPenerima
 
 
@@ -65,37 +63,30 @@ class HomeViewTest(TestCase):
         self.assertNotContains(response, "Sudah habis")
         self.assertNotContains(response, "Sudah berakhir")
 
-    def test_home_menghitung_dampak_dari_klaim_selesai(self):
+    def test_home_menghitung_total_porsi_dan_donor_unik(self):
         donor = User.objects.create_user("donor_dampak", password="rahasia-123")
-        penerima = User.objects.create_user("penerima_dampak", password="rahasia-123")
+        donor_lain = User.objects.create_user("donor_lain", password="rahasia-123")
         now = timezone.now()
-        donasi = Donasi.objects.create(
-            donor=donor,
-            nama="Nasi kotak",
-            jumlah_porsi=8,
-            lokasi="Balairung UI",
-            waktu_tersedia=now,
-            waktu_akhir_pengambilan=now + timedelta(hours=2),
-        )
-        Claim.objects.create(
-            recipient=penerima,
-            donor=donor,
-            donation_id=donasi.pk,
-            food_name=donasi.nama,
-            donor_name=donor.username,
-            pickup_location=donasi.lokasi,
-            pickup_deadline=donasi.waktu_akhir_pengambilan,
-            portions=2,
-            pickup_time=now + timedelta(minutes=30),
-            expires_at=now + timedelta(hours=1),
-            status=ClaimStatus.PICKED_UP,
-            picked_up_at=now,
-        )
+        data_donasi = [
+            (donor, "Nasi kotak", 800),
+            (donor, "Roti", 400),
+            (donor_lain, "Buah", 40),
+        ]
+        for pemilik, nama, jumlah_porsi in data_donasi:
+            Donasi.objects.create(
+                donor=pemilik,
+                nama=nama,
+                jumlah_porsi=jumlah_porsi,
+                lokasi="Balairung UI",
+                waktu_tersedia=now,
+                waktu_akhir_pengambilan=now + timedelta(hours=2),
+            )
 
         response = self.client.get(reverse("profil:home"))
 
-        self.assertEqual(response.context["total_porsi_diselamatkan"], 2)
-        self.assertEqual(response.context["total_donasi"], 1)
+        self.assertEqual(response.context["total_porsi_donasi"], 1240)
+        self.assertEqual(response.context["total_donor_berdonasi"], 2)
+        self.assertContains(response, "1.240")
 
 
 class ProfilModelTest(TestCase):

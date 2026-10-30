@@ -11,4 +11,5 @@ urlpatterns = [
     path("profil/edit/", views.edit_profil, name="edit_profil"),
     path("donor/", views.daftar_donor, name="daftar_donor"),
     path("donor/<int:pk>/", views.detail_donor, name="detail_donor"),
+    path("api/cari-lokasi/", views.cari_lokasi, name="cari_lokasi"),
 ]

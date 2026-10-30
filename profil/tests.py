@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest import mock
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -6,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from donasi.models import Donasi
+from venue.osm import OSMError
 from .models import JenisDonor, ProfilDonor, ProfilPenerima
 
 
@@ -359,3 +361,156 @@ class KomponenDesainHalamanMasukTest(TestCase):
     def test_kartu_peran_terpilih_mengikuti_parameter_peran(self):
         response = self.client.get(reverse("profil:daftar"), {"peran": "penerima"})
         self.assertContains(response, "Data penerima")
+
+
+
+class JarakTest(TestCase):
+    """Perhitungan jarak haversine dipakai filter radius daftar donor."""
+
+    def test_jarak_nol_pada_titik_yang_sama(self):
+        from .jarak import jarak_km
+        self.assertAlmostEqual(jarak_km(-6.36, 106.83, -6.36, 106.83), 0.0, places=6)
+
+    def test_jarak_fasilkom_ke_balairung_kurang_dari_tiga_km(self):
+        # Fasilkom UI (-6.3619, 106.8243) -> Balairung (-6.3615, 106.8326).
+        from .jarak import jarak_km
+        jarak = jarak_km(-6.3619, 106.8243, -6.3615, 106.8326)
+        self.assertGreater(jarak, 0.2)
+        self.assertLess(jarak, 3.0)
+
+    def test_filter_radius_menyingkirkan_donor_di_luar_radius(self):
+        from .jarak import filter_radius
+        dekat = self._buat_donor("dekat", -6.3619, 106.8243)
+        jauh = self._buat_donor("jauh", -6.50, 106.90)
+        hasil = filter_radius(ProfilDonor.objects.all(), -6.3619, 106.8243, 5)
+        self.assertEqual(set(hasil.values_list("nama_unit", flat=True)), {"dekat"})
+        self.assertFalse(hasil.filter(pk=jauh.pk).exists())
+        self.assertTrue(hasil.filter(pk=dekat.pk).exists())
+
+    def test_filter_radius_menyingkirkan_donor_tanpa_koordinat(self):
+        from .jarak import filter_radius
+        tanpa_koordinat = self._buat_donor("tanpa", None, None)
+        hasil = filter_radius(ProfilDonor.objects.all(), -6.36, 106.83, 25)
+        self.assertNotIn(tanpa_koordinat.pk, list(hasil.values_list("pk", flat=True)))
+
+    def _buat_donor(self, nama, lat, lng):
+        user = User.objects.create_user(nama, password="rahasia-123")
+        return ProfilDonor.objects.create(
+            user=user, nama_unit=nama, kontak="x@x",
+            latitude=lat, longitude=lng,
+        )
+
+
+class FilterRadiusDaftarDonorTest(TestCase):
+    """Filter radius (?radius=) pada daftar donor memakai lokasi profil yang login."""
+
+    def setUp(self):
+        self.url = reverse("profil:daftar_donor")
+        self.donor_login = User.objects.create_user("punya_lokasi", password="rahasia-123")
+        ProfilDonor.objects.create(
+            user=self.donor_login, nama_unit="Kantin Fasilkom", kontak="k@x",
+            latitude=-6.3619, longitude=106.8243,
+        )
+        user_jauh = User.objects.create_user("donor_jauh", password="rahasia-123")
+        ProfilDonor.objects.create(
+            user=user_jauh, nama_unit="Katering Depok Timur", kontak="d@x",
+            latitude=-6.50, longitude=106.90,
+        )
+
+    def test_filter_radius_hanya_tampilkan_donor_dekat(self):
+        self.client.force_login(self.donor_login)
+        response = self.client.get(self.url, {"radius": "5"})
+        self.assertContains(response, "Kantin Fasilkom")
+        self.assertNotContains(response, "Katering Depok Timur")
+
+    def test_tanpa_radius_semua_donor_tampil(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, "Kantin Fasilkom")
+        self.assertContains(response, "Katering Depok Timur")
+
+    def test_filter_radius_lewat_htmx(self):
+        self.client.force_login(self.donor_login)
+        response = self.client.get(self.url, {"radius": "5"}, HTTP_HX_REQUEST="true")
+        self.assertContains(response, "Kantin Fasilkom")
+        self.assertNotContains(response, "Katering Depok Timur")
+
+    def test_donor_tanpa_lokasi_mendapat_pesan_pengantar(self):
+        tanpa_lokasi = User.objects.create_user("tanpa_lokasi", password="rahasia-123")
+        ProfilDonor.objects.create(user=tanpa_lokasi, nama_unit="Tanpa Lokasi", kontak="t@x")
+        self.client.force_login(tanpa_lokasi)
+        response = self.client.get(self.url, {"radius": "5"})
+        self.assertContains(response, "Isi lokasi di halaman edit profil dulu")
+
+
+class CariLokasiApiTest(TestCase):
+    """Endpoint autocomplete lokasi memanggil klien Nominatim milik modul Venue."""
+
+    def setUp(self):
+        self.url = reverse("profil:cari_lokasi")
+
+    def test_query_terlalu_pendek_mengembalikan_daftar_kosong(self):
+        response = self.client.get(self.url, {"q": "ab"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"hasil": []})
+
+    def test_hasil_pencarian_diteruskan_sebagai_json(self):
+        with mock.patch("profil.views.cari_alamat") as cari:
+            cari.return_value = [
+                {"judul": "Fasilkom UI", "subjudul": "Depok, Jawa Barat",
+                 "alamat": "Fakultas Ilmu Komputer, Depok", "lat": -6.3619, "lng": 106.8243},
+            ]
+            response = self.client.get(self.url, {"q": "fasilkom"})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["hasil"][0]["judul"], "Fasilkom UI")
+        self.assertEqual(data["hasil"][0]["lat"], -6.3619)
+
+    def test_kegagalan_layanan_mengembalikan_502(self):
+        with mock.patch("profil.views.cari_alamat") as cari:
+            cari.side_effect = OSMError("down")
+            response = self.client.get(self.url, {"q": "fasilkom"})
+        self.assertEqual(response.status_code, 502)
+        self.assertIn("error", response.json())
+
+
+class LokasiEditProfilTest(TestCase):
+    """Form edit profil donor menyimpan alamat dan koordinat dari OSM."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("donor_lokasi", password="rahasia-123")
+        ProfilDonor.objects.create(user=self.user, nama_unit="Kantin Fasilkom", kontak="k@x")
+        self.client.force_login(self.user)
+
+    def test_form_menyimpan_alamat_dan_koordinat(self):
+        response = self.client.post(reverse("profil:edit_profil"), {
+            "nama_unit": "Kantin Fasilkom",
+            "jenis": JenisDonor.KANTIN,
+            "kontak": "k@x",
+            "deskripsi": "",
+            "alamat": "Fakultas Ilmu Komputer, Depok, Jawa Barat",
+            "latitude": "-6.361900",
+            "longitude": "106.824300",
+        })
+        self.assertRedirects(response, reverse("profil:profil_saya"))
+        donor = ProfilDonor.objects.get(user=self.user)
+        self.assertEqual(donor.alamat, "Fakultas Ilmu Komputer, Depok, Jawa Barat")
+        self.assertEqual(str(donor.latitude), "-6.361900")
+        self.assertEqual(str(donor.longitude), "106.824300")
+
+    def test_template_edit_menyiapkan_autocomplete_dan_field_tersembunyi(self):
+        response = self.client.get(reverse("profil:edit_profil"))
+        self.assertContains(response, 'id="id_alamat"')
+        self.assertContains(response, 'id="id_latitude"')
+        self.assertContains(response, 'id="id_longitude"')
+        self.assertContains(response, "profil_lokasi.js")
+
+    def test_template_penerima_tidak_menampilkan_lokasi(self):
+        penerima = User.objects.create_user("penerima_lokasi", password="rahasia-123")
+        ProfilPenerima.objects.create(
+            user=penerima, nama_lengkap="Penerima", nim="2506621000",
+            fakultas="fasilkom", kontak="p@x",
+        )
+        self.client.force_login(penerima)
+        response = self.client.get(reverse("profil:edit_profil"))
+        self.assertNotContains(response, 'id="id_alamat"')
+        self.assertNotContains(response, "profil_lokasi.js")

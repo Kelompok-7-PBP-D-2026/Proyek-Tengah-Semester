@@ -148,22 +148,31 @@ dan kontrak data dengan Profil, Venue, serta Klaim. AI selalu diarahkan untuk:
 - memakai pola Django dan JavaScript yang sudah dipelajari;
 - menjaga kode tetap sederhana dan memberi komentar hanya pada logika penting;
 - memvalidasi perubahan melalui test, coverage, Django system check, dan pemeriksaan
-  JavaScript;
-- tidak melakukan push Git, karena push dilakukan sendiri oleh pemilik modul.
+  JavaScript.
+
+Contoh penerapannya:
+
+| Tujuan | Contoh prompting | Hasil bantuan AI | Peninjauan dan perbaikan manual |
+| --- | --- | --- | --- |
+| Validasi data | “Audit validasi stok dan waktu pengambilan Donasi berdasarkan ketentuan tugas.” | Saran validasi lintas-field dan skenario error. | Pesan error disesuaikan dengan istilah aplikasi dan logika dijaga tetap memakai `ModelForm.clean()`. |
+| Authorization | “Pastikan donor hanya dapat mengubah donasinya sendiri dan berikan respons yang sesuai untuk HTML dan AJAX.” | Rancangan pemeriksaan role, ownership, serta respons 401/403. | Alur session, CSRF, dan query berdasarkan pemilik diperiksa kembali melalui negative test. |
+| Interaktivitas | “Gunakan HTMX untuk filter dan pagination, serta `fetch` untuk form CRUD tanpa menghilangkan fallback HTML.” | Struktur partial template, respons JSON, dan toast. | JavaScript disederhanakan, fallback tanpa JavaScript dipertahankan, dan interaksi diuji melalui browser. |
+| Integrasi modul | “Cocokkan Donasi dengan model Profil, Venue, dan Klaim yang sudah ada di repository.” | Pemetaan role, lokasi, stok, dan data klaim. | Implementasi disesuaikan kembali setelah kode tiap modul digabung agar memakai field dan route yang sebenarnya. |
+| Desain antarmuka | “Sesuaikan card dan detail Donasi dengan Figma serta design system bersama.” | Rancangan template dan CSS responsif. | Tampilan dibandingkan dengan Figma, lalu header/footer khusus diganti dengan template bersama agar konsisten. |
+| Pengujian | “Tambahkan regression test untuk validasi, izin akses, AJAX, HTMX, dan integrasi.” | Daftar skenario positif dan negatif. | Test disederhanakan ke pola `TestCase` dan Django test client, lalu coverage dan seluruh test dijalankan ulang. |
 
 ### Keterbatasan dan perbaikan manual
 
-- Saran awal AI sempat terlalu kompleks untuk kebutuhan proyek kuliah. Kode dan test
-  kemudian disederhanakan agar memakai `TestCase`, Django test client, `ModelForm`,
-  HTMX, dan `fetch` yang dapat dijelaskan saat live coding.
-- Asumsi awal mengenai field Profil, Venue, dan Klaim berubah setelah kode teman
-  digabung. Kontrak data diperiksa ulang dan implementasi disesuaikan dengan model
-  yang benar-benar ada di repository.
-- Header dan footer khusus Donasi yang sempat dibuat diganti dengan template bersama
-  agar tidak menimpa desain modul lain. Integrasi login khusus Donasi ditangani
-  bersama pemilik modul autentikasi/profil.
-- Konflik Git saat menggabungkan `main` diselesaikan dengan membandingkan perubahan
-  per file, bukan menerima seluruh hasil AI secara otomatis.
+- Beberapa rancangan awal lebih kompleks daripada materi yang dibutuhkan. Kode dan
+  test disederhanakan agar memakai `TestCase`, Django test client, `ModelForm`, HTMX,
+  dan `fetch` yang mudah dipahami saat live coding.
+- AI belum mengetahui perubahan kode anggota lain sebelum modul digabung. Kontrak
+  data selalu diperiksa ulang terhadap model, field, dan route terbaru di repository.
+- Hasil desain dari AI tidak otomatis menjamin kesesuaian visual dan responsivitas.
+  Tampilan dibandingkan kembali dengan Figma dan diuji pada beberapa ukuran layar.
+- Saran test AI dapat melewatkan perilaku negatif atau terlalu bergantung pada detail
+  implementasi. Skenario authorization, CSRF, validasi, dan fallback tanpa JavaScript
+  ditinjau serta diperbaiki manual.
 - Validasi akhir tetap dilakukan manual melalui browser, `manage.py check`, cek
   migrasi, seluruh unit test, coverage, dan pemeriksaan sintaks JavaScript.
 

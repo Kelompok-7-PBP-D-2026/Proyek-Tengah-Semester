@@ -1,14 +1,19 @@
 from datetime import timedelta
+from io import BytesIO
 from zoneinfo import ZoneInfo
 
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
+from PIL import Image
 
 from klaim.models import Claim, ClaimStatus
 from profil.models import Fakultas, JenisDonor, ProfilDonor, ProfilPenerima
+from venue.models import UnitVenue, Venue
 
+from .forms import DonasiForm
 from .models import Donasi
 
 
@@ -46,10 +51,23 @@ class DonasiTests(TestCase):
             fakultas=Fakultas.FASILKOM,
             kontak="penerima@test.com",
         )
+        self.venue_fasilkom = Venue.objects.create(
+            nama="Fasilkom UI",
+            fakultas=UnitVenue.FASILKOM,
+            latitude="-6.364100",
+            longitude="106.827200",
+        )
+        self.venue_balairung = Venue.objects.create(
+            nama="Balairung UI",
+            fakultas=UnitVenue.KAMPUS,
+            latitude="-6.368200",
+            longitude="106.826600",
+        )
         self.start = timezone.now().replace(second=0, microsecond=0) + timedelta(hours=1)
         self.item = self.create_donation()
 
     def create_donation(self, **changes):
+        """Membuat Donasi uji dengan nilai default yang dapat dioverride."""
         data = {
             "donor": self.owner,
             "nama": "Nasi ayam",
@@ -62,6 +80,7 @@ class DonasiTests(TestCase):
         return Donasi.objects.create(**data)
 
     def form_data(self, **changes):
+        """Membuat data POST valid untuk pengujian form Donasi."""
         wib = ZoneInfo("Asia/Jakarta")
         data = {
             "nama": "Roti seminar",
@@ -77,6 +96,7 @@ class DonasiTests(TestCase):
         return data
 
     def create_claim(self, status, portions):
+        """Membuat Klaim uji yang terhubung ke Donasi utama."""
         return Claim.objects.create(
             recipient=self.recipient,
             donor=self.owner,
@@ -90,6 +110,18 @@ class DonasiTests(TestCase):
             expires_at=self.start + timedelta(hours=2),
             status=status,
         )
+
+    def image_upload(self, image_format, filename="foto.png"):
+        """Membuat file gambar kecil di memori tanpa menulis file uji ke media."""
+        buffer = BytesIO()
+        Image.new("RGB", (2, 2), "green").save(buffer, format=image_format)
+        return SimpleUploadedFile(
+            filename,
+            buffer.getvalue(),
+            content_type="image/png",
+        )
+
+    # ===== CRUD dan validasi form =====
 
     def test_list_and_detail_pages_can_be_opened(self):
         list_response = self.client.get(reverse("donasi:daftar"))
@@ -183,6 +215,55 @@ class DonasiTests(TestCase):
         self.assertEqual(invalid_time.status_code, 400)
         self.assertIn("waktu_akhir_pengambilan", invalid_time.json()["errors"])
 
+        past_time = self.form_data(
+            waktu_tersedia="2020-01-01T10:00",
+            waktu_akhir_pengambilan="2020-01-01T11:00",
+        )
+        invalid_past_time = self.client.post(
+            create_url,
+            past_time,
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(invalid_past_time.status_code, 400)
+        self.assertIn(
+            "waktu_akhir_pengambilan",
+            invalid_past_time.json()["errors"],
+        )
+
+    def test_form_uses_registered_venue(self):
+        self.client.force_login(self.owner)
+        create_url = reverse("donasi:buat")
+
+        response = self.client.get(create_url)
+        self.assertContains(response, str(self.venue_fasilkom))
+        self.assertContains(response, reverse("venue:daftar"))
+
+        invalid_location = self.client.post(
+            create_url,
+            self.form_data(lokasi="Lokasi tidak terdaftar"),
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(invalid_location.status_code, 400)
+        self.assertIn("lokasi", invalid_location.json()["errors"])
+
+    def test_form_checks_the_real_image_format(self):
+        """Foto PNG diterima, sedangkan isi GIF yang diberi nama PNG ditolak."""
+        valid_form = DonasiForm(
+            data=self.form_data(),
+            files={"foto": self.image_upload("PNG")},
+        )
+        self.assertTrue(valid_form.is_valid())
+        self.assertEqual(valid_form.cleaned_data["foto"].name, "foto.png")
+
+        invalid_form = DonasiForm(
+            data=self.form_data(),
+            files={"foto": self.image_upload("GIF")},
+        )
+        self.assertFalse(invalid_form.is_valid())
+        self.assertIn("Gunakan foto berformat JPG atau PNG.", invalid_form.errors["foto"])
+
+    # ===== Daftar, filter, dan pagination =====
+
     def test_search_location_and_status_filters(self):
         self.create_donation(
             donor=self.other_donor,
@@ -222,6 +303,82 @@ class DonasiTests(TestCase):
         self.assertEqual(response.context["page_obj"].number, 2)
         self.assertEqual(len(response.context["page_obj"]), 2)
 
+    # ===== Interaktivitas HTMX pada daftar Donasi =====
+
+    def test_htmx_filter_returns_only_results_partial(self):
+        """Request HTMX cukup menerima kartu hasil, bukan seluruh halaman daftar."""
+        response = self.client.get(
+            reverse("donasi:daftar"),
+            {"q": "Nasi"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "donasi/partials/results.html")
+        self.assertTemplateNotUsed(response, "donasi/daftar.html")
+        self.assertContains(response, self.item.nama)
+
+    def test_list_has_htmx_filter_and_pagination_controls(self):
+        """Form filter dan link halaman harus memperbarui wadah hasil yang sama."""
+        for number in range(7):
+            self.create_donation(nama=f"Donasi HTMX {number}")
+
+        response = self.client.get(reverse("donasi:daftar"))
+
+        self.assertContains(response, 'hx-target="#donation-results"', count=4)
+        self.assertContains(response, 'hx-push-url="true"', count=4)
+
+    # ===== Hak akses dan keamanan respons =====
+
+    def test_json_access_errors_have_clear_status_codes(self):
+        """AJAX menerima 401 untuk anonim dan 403 untuk user yang bukan donor."""
+        anonymous_response = self.client.get(
+            reverse("donasi:buat"),
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(anonymous_response.status_code, 401)
+
+        self.client.force_login(self.recipient)
+        recipient_response = self.client.get(
+            reverse("donasi:buat"),
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(recipient_response.status_code, 403)
+
+    def test_private_list_requires_login_for_html_and_api(self):
+        """Daftar milik sendiri tidak boleh dibaca oleh pengunjung anonim."""
+        html_response = self.client.get(reverse("donasi:daftar"), {"mine": "1"})
+        api_response = self.client.get(reverse("donasi:api_list"), {"mine": "1"})
+
+        self.assertEqual(html_response.status_code, 302)
+        self.assertTrue(html_response.url.startswith(f"{reverse('login')}?next="))
+        self.assertEqual(api_response.status_code, 401)
+
+    def test_manage_donation_uses_shared_login_page(self):
+        """Pengunjung anonim diarahkan ke login bersama, bukan login khusus Donasi."""
+        response = self.client.get(reverse("donasi:buat"))
+
+        self.assertRedirects(
+            response,
+            f"{reverse('login')}?next={reverse('donasi:buat')}",
+        )
+
+    def test_delete_confirmation_and_missing_photo_are_handled(self):
+        """GET hapus menampilkan konfirmasi dan foto yang tidak ada menghasilkan 404."""
+        self.client.force_login(self.owner)
+        delete_response = self.client.get(
+            reverse("donasi:hapus", args=[self.item.pk])
+        )
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertContains(delete_response, "Hapus donasi ini?")
+
+        photo_url = reverse("donasi:foto", args=[self.item.pk])
+        self.assertEqual(self.client.get(photo_url).status_code, 404)
+
+        self.item.foto.name = "donasi/foto-tidak-ada.png"
+        self.item.save(update_fields=["foto"])
+        self.assertEqual(self.client.get(photo_url).status_code, 404)
+
     def test_json_hides_donor_from_anonymous_users(self):
         response = self.client.get(
             self.item.get_absolute_url(),
@@ -245,6 +402,8 @@ class DonasiTests(TestCase):
         self.item.waktu_akhir_pengambilan = timezone.now() - timedelta(hours=1)
         self.item.save()
         self.assertEqual(self.item.status_tampilan, "Pengambilan selesai")
+
+    # ===== Integrasi role, Klaim, dan Venue =====
 
     def test_navigation_is_different_for_donor_and_recipient(self):
         guest_html = self.client.get(reverse("donasi:daftar")).content.decode()
@@ -336,6 +495,7 @@ class DonasiTests(TestCase):
         self.assertIn("porsi diambil", html)
         self.assertIn("porsi tersisa", html)
         self.assertIn(f"<strong>{self.item.jumlah_porsi}</strong>", html)
+        self.assertContains(response, self.venue_fasilkom.get_absolute_url())
 
     def test_detail_uses_claim_data_for_portion_information(self):
         self.create_claim(ClaimStatus.PENDING, 2)

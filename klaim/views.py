@@ -10,7 +10,8 @@ from django.db.models import Count
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_GET, require_POST
 
 from . import integrations, services
 from .forms import ClaimForm
@@ -90,8 +91,6 @@ def _filtered_page(request, queryset):
     }
 
 
-# ---- recipient views -----------------------------------------------------
-
 @login_required
 def claim_create(request, donation_id):
     """Show and process the claim form for one donation."""
@@ -147,6 +146,27 @@ def claim_create(request, donation_id):
         },
     )
 
+@require_GET
+@never_cache
+def claim_check(request, donation_id):
+    """Tell the donation page whether the current user may open the claim form.
+
+    Answers JSON {"ok": bool, "message": str}. Anonymous users get ok=True so the
+    link proceeds and claim_create sends them to the login page. The real
+    validation still happens in claim_create and services.create_claim.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": True})
+
+    reason = integrations.recipient_block_reason(request.user)
+    if reason is None:
+        services.expire_overdue_claims(donation_id=donation_id)
+        donation = integrations.get_donation(donation_id)
+        if donation is None:
+            reason = "Donasi tidak ditemukan."
+        else:
+            reason = services.get_claim_blocker(request.user, donation)
+    return JsonResponse({"ok": reason is None, "message": reason or ""})
 
 @login_required
 def claim_list(request):
@@ -189,8 +209,6 @@ def claim_cancel(request, pk):
             messages.success(request, "Klaim berhasil dibatalkan.")
     return _redirect_back(request, "klaim:claim_list")
 
-
-# ---- donor views -----------------------------------------------------------
 
 @login_required
 @donor_required

@@ -1,24 +1,119 @@
 {% extends 'donasi/base.html' %}
+{% load claim_extras %}
+{# Halaman daftar Donasi: menampilkan pencarian, filter, dan kumpulan kartu makanan. #}
+
 {% block content %}
 <section class="donation-shell donation-content">
   {% include 'donasi/partials/messages.html' %}
+
   <div class="donation-heading-row">
-    <div><p class="eyebrow text-carrot">{% if filters.mine %}DONASI SAYA{% else %}BERBAGI DI KAMPUS{% endif %}</p><h1 class="donation-heading">MAKANAN <span>TERSEDIA</span></h1></div>
-    {% if is_donor %}<a class="btn btn-mbg-primary" href="{% url 'donasi:buat' %}">+ Buat donasi</a>{% endif %}
+    <div>
+      <p class="eyebrow text-carrot">
+        {% if filters.mine %}DONASI SAYA{% else %}BERBAGI DI KAMPUS{% endif %}
+      </p>
+      <h1 class="donation-heading">MAKANAN <span>TERSEDIA</span></h1>
+    </div>
+    {% if is_donor %}
+      <a class="btn btn-mbg-primary" href="{% url 'donasi:buat' %}">+ Buat donasi</a>
+    {% endif %}
   </div>
-  <form class="donation-filter donation-panel" method="get" id="donation-filter">
-    <div><label for="search">Cari makanan</label><input class="form-control" id="search" name="q" value="{{ filters.q }}" placeholder="Nama makanan" maxlength="140"><p class="form-text">Contoh: nasi ayam.</p></div>
-    <div><label for="location">Lokasi</label><select class="form-select" id="location" name="lokasi"><option value="">Semua lokasi</option>{% for lokasi in lokasi_list %}<option value="{{ lokasi }}" {% if filters.lokasi == lokasi %}selected{% endif %}>{{ lokasi }}</option>{% endfor %}</select><p class="form-text">Pilih lokasi pengambilan.</p></div>
-    <div><label for="period">Waktu</label><select class="form-select" id="period" name="waktu"><option value="">Semua waktu</option><option value="hari_ini" {% if filters.waktu == 'hari_ini' %}selected{% endif %}>Hari ini</option><option value="besok" {% if filters.waktu == 'besok' %}selected{% endif %}>Besok</option><option value="pekan_ini" {% if filters.waktu == 'pekan_ini' %}selected{% endif %}>Pekan ini</option></select><p class="form-text">Waktu pengambilan dalam WIB.</p></div>
-    <input type="hidden" name="status" value="{{ filters.status }}"><input type="hidden" name="mine" value="{% if filters.mine %}1{% endif %}">
+
+  {# HTMX mengganti hasil tanpa reload; method GET tetap menjadi fallback tanpa JavaScript. #}
+  <form
+    class="donation-filter donation-panel"
+    method="get"
+    id="donation-filter"
+    hx-get="{% url 'donasi:daftar' %}"
+    hx-target="#donation-results"
+    hx-push-url="true"
+    hx-indicator="#donation-loading"
+  >
+    <div>
+      <label for="search">Cari makanan</label>
+      <input
+        class="form-control"
+        id="search"
+        name="q"
+        value="{{ filters.q }}"
+        placeholder="Nama makanan"
+        maxlength="140"
+      >
+      <p class="form-text">Contoh: nasi ayam.</p>
+    </div>
+
+    <div>
+      <label for="location">Lokasi</label>
+      <select class="form-select" id="location" name="lokasi">
+        <option value="">Semua lokasi</option>
+        {% for lokasi in lokasi_list %}
+          <option
+            value="{{ lokasi }}"
+            {% if filters.lokasi == lokasi %}selected{% endif %}
+          >{{ lokasi }}</option>
+        {% endfor %}
+      </select>
+      <p class="form-text">Pilih lokasi pengambilan.</p>
+    </div>
+
+    <div>
+      <label for="period">Waktu</label>
+      <select class="form-select" id="period" name="waktu">
+        <option value="">Semua waktu</option>
+        <option
+          value="hari_ini"
+          {% if filters.waktu == 'hari_ini' %}selected{% endif %}
+        >Hari ini</option>
+        <option
+          value="besok"
+          {% if filters.waktu == 'besok' %}selected{% endif %}
+        >Besok</option>
+        <option
+          value="pekan_ini"
+          {% if filters.waktu == 'pekan_ini' %}selected{% endif %}
+        >Pekan ini</option>
+      </select>
+      <p class="form-text">Waktu pengambilan dalam WIB.</p>
+    </div>
+
+    <input type="hidden" name="status" value="{{ filters.status }}">
+    <input type="hidden" name="mine" value="{% if filters.mine %}1{% endif %}">
     <button class="btn btn-mbg-green" type="submit">Terapkan</button>
+    <span id="donation-loading" class="htmx-indicator" aria-live="polite">
+      Memuat…
+    </span>
   </form>
+
   <div class="donation-tabs" aria-label="Filter status">
-    <button type="button" data-filter-status="" class="donation-tab {% if not filters.status and not filters.mine %}active{% endif %}" aria-pressed="{% if not filters.status and not filters.mine %}true{% else %}false{% endif %}">Semua</button>
-    <button type="button" data-filter-status="tersedia" class="donation-tab {% if filters.status == 'tersedia' %}active{% endif %}" aria-pressed="{% if filters.status == 'tersedia' %}true{% else %}false{% endif %}">Tersedia</button>
-    {% if is_donor %}<button type="button" data-filter-mine="1" class="donation-tab {% if filters.mine %}active{% endif %}" aria-pressed="{% if filters.mine %}true{% else %}false{% endif %}">Donasi saya</button>{% endif %}
+    <button
+      type="button"
+      data-filter-status=""
+      class="donation-tab {% if not filters.status and not filters.mine %}active{% endif %}"
+      aria-pressed="{% if not filters.status and not filters.mine %}true{% else %}false{% endif %}"
+    >Semua</button>
+    <button
+      type="button"
+      data-filter-status="tersedia"
+      class="donation-tab {% if filters.status == 'tersedia' %}active{% endif %}"
+      aria-pressed="{% if filters.status == 'tersedia' %}true{% else %}false{% endif %}"
+    >Tersedia</button>
+    {% if is_donor %}
+      <button
+        type="button"
+        data-filter-mine="1"
+        class="donation-tab {% if filters.mine %}active{% endif %}"
+        aria-pressed="{% if filters.mine %}true{% else %}false{% endif %}"
+      >Donasi saya</button>
+    {% endif %}
   </div>
-  <p id="filter-feedback" class="visually-hidden" role="status" aria-live="polite"></p>
-  <div id="donation-results" aria-live="polite">{% include 'donasi/partials/results.html' %}</div>
+
+  {# HTMX hanya mengganti isi div ini dengan partial results.html. #}
+  <div id="donation-results" aria-live="polite">
+    {% include 'donasi/partials/results.html' %}
+  </div>
 </section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+{% claim_button_scripts %}
 {% endblock %}

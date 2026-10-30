@@ -1,0 +1,95 @@
+{% extends "laporan/base.html" %}
+
+{% load laporan_format %}
+
+{% block report_width %}report-narrow{% endblock %}
+{% block laporan_content %}
+  <nav class="report-breadcrumb" aria-label="Breadcrumb">
+    <a href="{% url 'laporan:dashboard' %}">Laporan</a>
+    <span>›</span>
+    {% if editing %}
+      <a href="{{ laporan.get_absolute_url }}">{{ laporan|periode_laporan }}</a>
+      <span>›</span>Edit
+    {% else %}
+      Buat laporan
+    {% endif %}
+  </nav>
+  <h1>
+    {% if editing %}
+      Edit
+    {% else %}
+      Buat
+    {% endif %}
+    <span>Laporan</span>
+  </h1>
+  {% if not editing %}
+    <p class="report-lead">
+      Total dihitung otomatis dari klaim yang sudah diambil pada periode terpilih.
+    </p>
+  {% endif %}
+  <form method="post"
+        class="report-panel report-form"
+        id="report-form"
+        {% if not editing and sumber_terhubung %}data-preview-url="{% url 'laporan:pratinjau' %}"{% endif %}>
+    {% csrf_token %}{{ form.non_field_errors }}
+    {% include "laporan/partials/field.html" with field=form.judul %}
+    <div class="report-field-row">
+      {% include "laporan/partials/field.html" with field=form.periode_mulai %}
+      {% include "laporan/partials/field.html" with field=form.periode_selesai %}
+    </div>
+    {% if editing %}
+      {% include "laporan/partials/field.html" with field=form.catatan %}
+      <p class="report-warning">Mengubah periode akan menghitung ulang semua total dari data klaim.</p>
+    {% else %}
+      <h2>Pratinjau agregasi</h2>
+      <div data-preview-stats>
+        {% include "laporan/partials/stats.html" with tinted=True impact=preview_impact %}
+      </div>
+      <p class="report-help"
+         data-preview-message
+         role="status"
+         aria-live="polite">
+        {% if preview_impact %}
+          Angka diambil dari {{ preview_impact.jumlah_klaim|angka_dampak }} klaim berstatus sudah diambil pada periode ini (WIB).
+        {% elif sumber_terhubung %}
+          Pilih periode yang valid untuk melihat pratinjau. Jika data belum tersedia, coba lagi.
+        {% else %}
+          Data Klaim belum terhubung. Laporan disimpan sebagai draf; angka dampak tidak diisi manual.
+        {% endif %}
+      </p>
+      {% if sumber_terhubung %}
+        <button type="button"
+                class="report-link"
+                data-preview-retry
+                {% if preview_impact %}hidden{% endif %}>Coba lagi</button>
+        <noscript>
+          <p class="report-help">
+            Pratinjau awal menggunakan periode di atas. Saat laporan dibuat, angka dihitung ulang sesuai tanggal yang Anda kirim.
+          </p>
+        </noscript>
+      {% endif %}
+    {% endif %}
+    <div class="report-form-actions">
+      <a class="report-button outline"
+         href="{% if editing %}{{ laporan.get_absolute_url }}{% else %}{% url 'laporan:dashboard' %}{% endif %}">Batal</a>
+      <div class="report-action-group">
+        {% if editing %}
+          <button class="report-button outline"
+                  type="submit"
+                  name="action"
+                  value="recalculate"
+                  {% if not sumber_terhubung %}disabled title="Data Klaim belum terhubung"{% endif %}>
+            Hitung ulang
+          </button>
+        {% endif %}
+        <button type="submit" class="report-button success">
+          {% if editing %}
+            Simpan perubahan
+          {% else %}
+            Buat laporan
+          {% endif %}
+        </button>
+      </div>
+    </div>
+  </form>
+{% endblock %}

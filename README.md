@@ -41,6 +41,19 @@ Manfaat aplikasi ini bagi masyarakat antara lain:
 | 4 | Venue dan Lokasi | Model titik pengambilan berisi nama gedung, fakultas, koordinat, dan deskripsi akses. Admin dan donor dapat mengelola venue, dengan integrasi OpenStreetMap untuk menampilkan peta dan menghitung jarak ke lokasi pengguna. | Immanuel Marvin Pandjaitan |
 | 5 | Laporan Dampak | Model laporan berisi periode, total makanan tersalurkan, dan jumlah donor serta penerima yang terlibat. Admin dapat membuat laporan dari agregasi data klaim, mengedit, menghapus, dan mengunduh laporan dalam bentuk PDF atau tabel. | Joshua Imanuel Setiawan |
 
+## Dokumentasi Modul dan Penggunaan AI
+
+Penjelasan teknis dan AI disclosure ditulis pada README setiap modul. Dokumentasi
+ini mencakup tujuan penggunaan AI, contoh prompt, hasil yang digunakan, serta
+peninjauan dan perbaikan manual oleh pengembang.
+
+- [Donasi Makanan](donasi/README.md)
+- [Klaim dan Reservasi](klaim/README.md)
+- [Venue dan Lokasi](venue/README.md)
+- [Laporan Dampak](laporan/README.md)
+
+README untuk modul Profil Pengguna akan ditambahkan oleh PIC modul tersebut.
+
 ## Public API yang Digunakan
 
 Implementasi dan cara mencoba modul Donasi Makanan dijelaskan di
@@ -65,7 +78,7 @@ di https://wiki.openstreetmap.org/wiki/API.
 ## Tautan
 
 - Repositori: https://github.com/Kelompok-7-PBP-D-2026/Proyek-Tengah-Semester
-- Deployment PWS: akan ditambahkan setelah deployment pertama
+- Deployment PWS: https://immanuel-marvin-pts-surplus.pws.cs.ui.ac.id
 - Desain Figma: https://www.figma.com/design/MT2ZypZ7HGnSp8RB2AaWKt
 
 ## Design System
@@ -115,3 +128,24 @@ Aplikasi sudah ter-deploy di PWS:
 - Repository PWS: https://pws.cs.ui.ac.id/immanuel.marvin/pts-surplus
 - Database: PostgreSQL (schema `tugas_kelompok`)
 - Konfigurasi lewat tab Environs di PWS: `PRODUCTION`, `DEBUG`, `SECRET_KEY`, `DB_*`, `SCHEMA`, `PWS_DEPLOY_URL`
+
+## CI/CD
+
+Otomatisasi ada di `.github/workflows/ci-cd.yml` dan terdiri dari dua job:
+
+| Job | Kapan jalan | Yang dilakukan |
+|---|---|---|
+| `test` | Setiap pull request ke `main` dan setiap push ke `main` | `manage.py check`, cek migrasi belum tertinggal, lalu `manage.py test` beserta laporan coverage |
+| `deploy` | Hanya push ke `main`, dan hanya kalau job `test` lulus | Mengambil kode di `main` lalu `git push` ke repository PWS (`main` → `master`), yang memicu build dan `migrate` otomatis di PWS |
+
+**Secret yang dibutuhkan:** `PWS_URL`, dibuat di **Settings → Secrets and variables → Actions → New repository secret**. Isinya URL git PWS lengkap dengan kredensial pemilik proyek:
+
+```
+https://<username-PWS>:<password-PWS>@pws.cs.ui.ac.id/immanuel.marvin/pts-surplus
+```
+
+Kredensialnya milik akun pemilik proyek PWS, jadi yang bisa mengisi secret ini adalah pemilik proyek sekaligus admin repositori. Username dan password-nya diambil dari dashboard PWS: **Project → Settings → Git Credentials** (Username dan Git Password; password ini hanya tampil sekali, kalau lupa klik **Regenerate**). Ini bukan password SSO. Kalau password mengandung karakter khusus, tulis dalam bentuk URL-encoded (misalnya `@` jadi `%40`, `!` jadi `%21`). **Buat secret ini sebelum workflow di-merge ke `main`**, supaya tidak ada workflow merah yang gagal deploy. Kalau `PWS_URL` masih kosong, job `deploy` tidak gagal — hanya menulis peringatan dan melewati deploy.
+
+Workflow memakai Python 3.13, sama dengan versi di PWS. Setelah workflow aktif, sebaiknya aktifkan juga aturan di **Settings → Branches → Branch protection rule** untuk `main`: wajib lulus status check `Test` sebelum pull request boleh di-merge.
+
+Deploy tidak pernah jalan dari branch fitur, jadi pekerjaan di branch aman: kode baru sampai ke PWS setelah pull request-nya di-merge ke `main`.

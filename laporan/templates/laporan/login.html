@@ -1,0 +1,20 @@
+{% extends "laporan/base.html" %}
+
+{% block laporan_content %}
+  <section class="report-panel report-centered">
+    <p class="report-eyebrow">RUANG PENGELOLA</p>
+    <h1>Masuk ke laporan</h1>
+    <p>Gunakan akun admin atau pengelola kampus yang memiliki akses staf.</p>
+    <form method="post" class="report-form">
+      {% csrf_token %}{{ form.non_field_errors }}
+      {% for field in form %}
+        <div class="report-field">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}{{ field.errors }}
+        </div>
+      {% endfor %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="report-button" type="submit">Masuk</button>
+    </form>
+  </section>
+{% endblock %}

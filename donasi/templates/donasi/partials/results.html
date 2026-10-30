@@ -1,31 +1,150 @@
 {% load static %}
+{# Kumpulan kartu dan pagination; dapat dirender ulang saat filter AJAX berubah. #}
+
+<p id="filter-feedback" class="visually-hidden" role="status" aria-live="polite">
+  {{ page_obj.paginator.count }} donasi ditemukan.
+</p>
+
 <div class="donation-grid">
-{% for item in page_obj %}
-  <article class="donation-food-card">
-    <a class="donation-card-media tone-{% cycle 'gold' 'kiwi' 'sand' %}" href="{{ item.get_absolute_url }}" aria-label="Lihat {{ item.nama }}{% if item.pengambilan_selesai %}, telah berakhir{% elif item.jumlah_porsi == 0 %}, habis{% else %}, tersisa {{ item.jumlah_porsi }} porsi{% endif %}">
-      {% if item.foto %}<img class="donation-photo" src="{% url 'donasi:foto' item.pk %}" alt="{{ item.nama }}" loading="lazy">{% else %}<img class="donation-card-illustration" src="{% static 'donasi/images/food-card.svg' %}" width="120" height="102" alt="" loading="lazy">{% endif %}
-      <span class="donation-status donation-stock {% if item.pengambilan_selesai %}stock-ended{% elif item.jumlah_porsi == 0 %}stock-empty{% elif item.jumlah_porsi <= 5 %}stock-low{% else %}stock-plenty{% endif %}"><span class="donation-stock-dot" aria-hidden="true"></span>{% if item.pengambilan_selesai %}Telah berakhir{% elif item.jumlah_porsi == 0 %}Habis{% else %}{{ item.jumlah_porsi }} porsi{% endif %}</span>
-    </a>
-    <div class="donation-card-body"><h2><a href="{{ item.get_absolute_url }}">{{ item.nama }}</a></h2><p>{{ item.lokasi }}</p>
-      <div class="donation-card-bottom">
-        {% if item.pengambilan_selesai %}<p class="donation-card-deadline">Berakhir {{ item.waktu_akhir_pengambilan_wib|date:'d M, H.i' }} WIB</p>
-        {% else %}<p class="donation-card-deadline">Ambil sebelum {{ item.waktu_akhir_pengambilan_wib|date:'d M, H.i' }} WIB</p>{% endif %}
-        <div class="donation-card-actions">
-          {% if is_donor and item.donor_id == user.pk %}<a class="btn btn-mbg-sunshine donation-edit-link" href="{% url 'donasi:edit' item.pk %}" aria-label="Edit donasi {{ item.nama }}" title="Edit donasi">{% include 'donasi/partials/icons/edit.html' %}</a>{% endif %}
-          {% if is_recipient and not item.pengambilan_selesai and item.jumlah_porsi > 0 %}<a class="btn btn-mbg-sunshine donation-claim-link" href="{% url 'klaim:claim_create' item.pk %}">Klaim</a>{% endif %}
-          <a class="btn btn-mbg-green donation-detail-link" href="{{ item.get_absolute_url }}" aria-label="Lihat detail {{ item.nama }}"><span>Lihat detail</span>{% include 'donasi/partials/icons/arrow_right.html' %}</a>
+  {% for item in page_obj %}
+    <article class="donation-food-card">
+      <a
+        class="donation-card-media tone-{% cycle 'gold' 'kiwi' 'sand' %}"
+        href="{{ item.get_absolute_url }}"
+        {% if item.pengambilan_selesai %}
+          aria-label="Lihat {{ item.nama }}, telah berakhir"
+        {% elif item.jumlah_porsi == 0 %}
+          aria-label="Lihat {{ item.nama }}, habis"
+        {% else %}
+          aria-label="Lihat {{ item.nama }}, tersisa {{ item.jumlah_porsi }} porsi"
+        {% endif %}
+      >
+        {% if item.foto %}
+          <img
+            class="donation-photo"
+            src="{% url 'donasi:foto' item.pk %}"
+            alt="{{ item.nama }}"
+            loading="lazy"
+          >
+        {% else %}
+          <img
+            class="donation-card-illustration"
+            src="{% static 'donasi/images/food-card.svg' %}"
+            width="120"
+            height="102"
+            alt=""
+            loading="lazy"
+          >
+        {% endif %}
+
+        <span
+          class="donation-status donation-stock
+            {% if item.pengambilan_selesai %}stock-ended
+            {% elif item.jumlah_porsi == 0 %}stock-empty
+            {% elif item.jumlah_porsi <= 5 %}stock-low
+            {% else %}stock-plenty{% endif %}"
+        >
+          <span class="donation-stock-dot" aria-hidden="true"></span>
+          {% if item.pengambilan_selesai %}
+            Telah berakhir
+          {% elif item.jumlah_porsi == 0 %}
+            Habis
+          {% else %}
+            {{ item.jumlah_porsi }} porsi
+          {% endif %}
+        </span>
+      </a>
+
+      <div class="donation-card-body">
+        <h2><a href="{{ item.get_absolute_url }}">{{ item.nama }}</a></h2>
+        <p>{{ item.lokasi }}</p>
+
+        <div class="donation-card-bottom">
+          {% if item.pengambilan_selesai %}
+            <p class="donation-card-deadline">
+              Berakhir {{ item.waktu_akhir_pengambilan_wib|date:'d M, H.i' }} WIB
+            </p>
+          {% else %}
+            <p class="donation-card-deadline">
+              Ambil sebelum {{ item.waktu_akhir_pengambilan_wib|date:'d M, H.i' }} WIB
+            </p>
+          {% endif %}
+
+          <div class="donation-card-actions">
+            {% if is_donor and item.donor_id == user.pk %}
+              <a
+                class="btn btn-mbg-sunshine donation-edit-link"
+                href="{% url 'donasi:edit' item.pk %}"
+                aria-label="Edit donasi {{ item.nama }}"
+                title="Edit donasi"
+              >{% include 'donasi/partials/icons/edit.html' %}</a>
+            {% endif %}
+
+            {% if is_recipient and not item.pengambilan_selesai and item.jumlah_porsi > 0 %}
+              <a
+                class="btn btn-mbg-sunshine donation-claim-link"
+                href="{% url 'klaim:claim_create' item.pk %}"
+              >
+                Klaim
+              </a>
+            {% endif %}
+
+            <a
+              class="btn btn-mbg-green donation-detail-link"
+              href="{{ item.get_absolute_url }}"
+              aria-label="Lihat detail {{ item.nama }}"
+            >
+              <span>Lihat detail</span>
+              {% include 'donasi/partials/icons/arrow_right.html' %}
+            </a>
+          </div>
         </div>
       </div>
+    </article>
+  {% empty %}
+    <div class="donation-empty donation-panel">
+      <img src="{% static 'donasi/images/empty.svg' %}" width="200" height="170" alt="">
+      <h2>Belum ada donasi di sini</h2>
+      <p>Coba ganti lokasi atau waktu, atau lihat semua donasi yang tersedia.</p>
+      <a class="btn btn-mbg-outline-green" href="{% url 'donasi:daftar' %}">Reset filter</a>
     </div>
-  </article>
-{% empty %}
-  <div class="donation-empty donation-panel"><img src="{% static 'donasi/images/empty.svg' %}" width="200" height="170" alt=""><h2>Belum ada donasi di sini</h2><p>Coba ganti lokasi atau waktu, atau lihat semua donasi yang tersedia.</p><a class="btn btn-mbg-outline-green" href="{% url 'donasi:daftar' %}">Reset filter</a></div>
-{% endfor %}
+  {% endfor %}
 </div>
+
 {% if page_obj.has_other_pages %}
-<nav class="donation-pagination" aria-label="Halaman donasi">
-  {% if page_obj.has_previous %}<a href="{% querystring page=page_obj.previous_page_number %}" data-page="{{ page_obj.previous_page_number }}" aria-label="Halaman sebelumnya">‹</a>{% endif %}
-  {% for number in page_obj.paginator.page_range %}<a href="{% querystring page=number %}" data-page="{{ number }}" {% if number == page_obj.number %}class="active" aria-current="page"{% endif %}>{{ number }}</a>{% endfor %}
-  {% if page_obj.has_next %}<a href="{% querystring page=page_obj.next_page_number %}" data-page="{{ page_obj.next_page_number }}" aria-label="Halaman berikutnya">›</a>{% endif %}
-</nav>
+  {# Setiap link tetap memiliki href agar pagination bekerja tanpa HTMX. #}
+  <nav class="donation-pagination" aria-label="Halaman donasi">
+    {% if page_obj.has_previous %}
+      <a
+        href="{% querystring page=page_obj.previous_page_number %}"
+        data-page="{{ page_obj.previous_page_number }}"
+        hx-get="{% querystring page=page_obj.previous_page_number %}"
+        hx-target="#donation-results"
+        hx-push-url="true"
+        aria-label="Halaman sebelumnya"
+      >‹</a>
+    {% endif %}
+
+    {% for number in page_obj.paginator.page_range %}
+      <a
+        href="{% querystring page=number %}"
+        data-page="{{ number }}"
+        hx-get="{% querystring page=number %}"
+        hx-target="#donation-results"
+        hx-push-url="true"
+        {% if number == page_obj.number %}class="active" aria-current="page"{% endif %}
+      >{{ number }}</a>
+    {% endfor %}
+
+    {% if page_obj.has_next %}
+      <a
+        href="{% querystring page=page_obj.next_page_number %}"
+        data-page="{{ page_obj.next_page_number }}"
+        hx-get="{% querystring page=page_obj.next_page_number %}"
+        hx-target="#donation-results"
+        hx-push-url="true"
+        aria-label="Halaman berikutnya"
+      >›</a>
+    {% endif %}
+  </nav>
 {% endif %}

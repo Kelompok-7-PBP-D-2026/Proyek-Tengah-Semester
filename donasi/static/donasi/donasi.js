@@ -1,9 +1,9 @@
 (() => {
+  // Form filter dikirim oleh HTMX; JavaScript hanya mengatur tab statusnya.
   const filterForm = document.querySelector("#donation-filter");
-  const results = document.querySelector("#donation-results");
-  let filterController;
 
   function getCookie(name) {
+    // Token CSRF dari cookie wajib dikirim pada request POST Django.
     const cookies = document.cookie.split(";");
     for (const cookie of cookies) {
       const [key, value] = cookie.trim().split("=");
@@ -13,6 +13,7 @@
   }
 
   function showToast(messages, type = "error") {
+    // Satu fungsi menangani toast sukses maupun kumpulan pesan validasi.
     const toast = document.querySelector("#donation-toast");
     if (!toast) return;
 
@@ -29,14 +30,11 @@
       body.append(paragraph);
     }
 
-    if (window.bootstrap) {
-      new window.bootstrap.Toast(toast, { autohide: type === "success" }).show();
-    } else {
-      toast.classList.add("show");
-    }
+    new window.bootstrap.Toast(toast, { autohide: type === "success" }).show();
   }
 
   function getErrorMessages(errors) {
+    // Ubah object error Django menjadi daftar teks yang bisa dimasukkan ke toast.
     const messages = [];
     for (const fieldErrors of Object.values(errors || {})) {
       for (const error of fieldErrors) messages.push(error.message);
@@ -47,59 +45,28 @@
   function updateActiveTab() {
     if (!filterForm) return;
     document.querySelectorAll(".donation-tab").forEach((tab) => {
-      const active = tab.dataset.filterMine
-        ? filterForm.elements.mine.value === "1"
-        : filterForm.elements.mine.value !== "1"
+      // Tab aktif mengikuti input tersembunyi `mine` atau `status` pada form filter.
+      let active;
+      if (tab.dataset.filterMine) {
+        active = filterForm.elements.mine.value === "1";
+      } else {
+        active = filterForm.elements.mine.value !== "1"
           && filterForm.elements.status.value === tab.dataset.filterStatus;
+      }
       tab.classList.toggle("active", active);
       tab.setAttribute("aria-pressed", active);
     });
   }
 
-  async function loadResults(url) {
-    if (filterController) filterController.abort();
-    filterController = new AbortController();
-    results.setAttribute("aria-busy", "true");
-
-    try {
-      const response = await fetch(url, {
-        headers: { Accept: "application/json" },
-        signal: filterController.signal,
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Donasi gagal dimuat.");
-
-      results.innerHTML = data.html;
-      document.querySelector("#filter-feedback").textContent = `${data.count} donasi ditemukan.`;
-      updateActiveTab();
-    } catch (error) {
-      if (error.name !== "AbortError") showToast(error.message || "Donasi gagal dimuat.");
-    } finally {
-      results.removeAttribute("aria-busy");
-    }
-  }
-
-  if (filterForm && results) {
-    filterForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const url = new URL(window.location.href);
-      url.search = new URLSearchParams(new FormData(filterForm)).toString();
-      loadResults(url);
-    });
-
+  if (filterForm) {
+    // Klik tab mengisi input tersembunyi, lalu HTMX mengirim form GET yang sama.
     document.querySelectorAll(".donation-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         filterForm.elements.mine.value = tab.dataset.filterMine || "";
         filterForm.elements.status.value = tab.dataset.filterStatus || "";
+        updateActiveTab();
         filterForm.requestSubmit();
       });
-    });
-
-    results.addEventListener("click", (event) => {
-      const link = event.target.closest("a[data-page]");
-      if (!link) return;
-      event.preventDefault();
-      loadResults(link.href);
     });
   }
 
@@ -109,8 +76,10 @@
   });
 
   const initialErrors = document.querySelector("#donation-initial-errors");
+  // Error dari submit biasa tetap ditampilkan sebagai toast saat halaman dimuat ulang.
   if (initialErrors) showToast(getErrorMessages(JSON.parse(initialErrors.textContent)));
 
+  // Form buat, edit, dan hapus dikirim melalui AJAX; backend juga menerima submit biasa.
   document.querySelectorAll("[data-donation-form], [data-delete-form]").forEach((form) => {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();

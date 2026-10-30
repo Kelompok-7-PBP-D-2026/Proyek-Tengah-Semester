@@ -1,0 +1,8 @@
+<section class="claim-card claim-card--spaced">
+    <h2 class="claim-card__title">Informasi Lokasi</h2>
+    <dl class="detail-list">
+        <dt>Lokasi Ambil</dt>
+        <dd>{{ location_name }}{% if point and point.url %}<br><a class="distance-link" href="{{ point.url }}">Lihat Lokasi dan Peta</a>{% endif %}</dd>
+        {% if show_route %}{% include "klaim/_distance_rows.html" %}{% endif %}
+    </dl>
+</section>

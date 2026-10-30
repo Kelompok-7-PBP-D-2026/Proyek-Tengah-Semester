@@ -1,7 +1,11 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
+from donasi.models import Donasi
 from .models import JenisDonor, ProfilDonor, ProfilPenerima
 
 
@@ -13,6 +17,76 @@ class HomeViewTest(TestCase):
     def test_home_uses_base_template(self):
         response = self.client.get("/")
         self.assertTemplateUsed(response, "base.html")
+        self.assertContains(response, "Makanan Berlebih Gratis")
+
+    def test_home_menampilkan_tiga_donasi_yang_masih_tersedia(self):
+        donor = User.objects.create_user("donor_landing", password="rahasia-123")
+        now = timezone.now()
+        for index in range(4):
+            Donasi.objects.create(
+                donor=donor,
+                nama=f"Makanan {index}",
+                jumlah_porsi=index + 1,
+                lokasi="Balairung UI",
+                waktu_tersedia=now,
+                waktu_akhir_pengambilan=now + timedelta(hours=2),
+            )
+
+        response = self.client.get(reverse("profil:home"))
+
+        self.assertEqual(len(response.context["makanan_tersedia"]), 3)
+        self.assertContains(response, "Makanan 3")
+        self.assertNotContains(response, "Makanan 0")
+
+    def test_home_tidak_menampilkan_donasi_habis_atau_berakhir(self):
+        donor = User.objects.create_user("donor_filter", password="rahasia-123")
+        now = timezone.now()
+        Donasi.objects.create(
+            donor=donor,
+            nama="Sudah habis",
+            jumlah_porsi=0,
+            lokasi="Kantin Teknik",
+            waktu_tersedia=now - timedelta(hours=2),
+            waktu_akhir_pengambilan=now + timedelta(hours=1),
+        )
+        Donasi.objects.create(
+            donor=donor,
+            nama="Sudah berakhir",
+            jumlah_porsi=5,
+            lokasi="Kantin Teknik",
+            waktu_tersedia=now - timedelta(hours=2),
+            waktu_akhir_pengambilan=now - timedelta(hours=1),
+        )
+
+        response = self.client.get(reverse("profil:home"))
+
+        self.assertNotContains(response, "Sudah habis")
+        self.assertNotContains(response, "Sudah berakhir")
+
+    def test_home_menghitung_total_porsi_dan_donor_unik(self):
+        donor = User.objects.create_user("donor_dampak", password="rahasia-123")
+        donor_lain = User.objects.create_user("donor_lain", password="rahasia-123")
+        now = timezone.now()
+        data_donasi = [
+            (donor, "Nasi kotak", 800),
+            (donor, "Roti", 400),
+            (donor_lain, "Buah", 40),
+        ]
+        for pemilik, nama, jumlah_porsi in data_donasi:
+            Donasi.objects.create(
+                donor=pemilik,
+                nama=nama,
+                jumlah_porsi=jumlah_porsi,
+                lokasi="Balairung UI",
+                waktu_tersedia=now,
+                waktu_akhir_pengambilan=now + timedelta(hours=2),
+            )
+
+        response = self.client.get(reverse("profil:home"))
+
+        self.assertEqual(response.context["total_porsi_donasi"], 1240)
+        self.assertEqual(response.context["total_donor_berdonasi"], 2)
+        self.assertContains(response, "1.240")
 
 
 class ProfilModelTest(TestCase):

@@ -44,6 +44,12 @@ body {
 .text-carrot { color: var(--mbg-carrot) !important; }
 .text-sunshine { color: var(--mbg-sunshine) !important; }
 
+/* Jaga kontras teks footer bersama dari warna tautan khusus setiap modul. */
+footer.text-cream,
+footer .text-cream {
+    color: var(--mbg-cream) !important;
+}
+
 /* Tombol */
 .btn-mbg-primary {
     background-color: var(--mbg-carrot);

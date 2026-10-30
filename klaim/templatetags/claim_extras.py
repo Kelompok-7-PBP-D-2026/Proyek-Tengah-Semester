@@ -78,19 +78,33 @@ def claim_button_scripts():
     return format_html('<script src="{}" defer></script>', static("klaim/js/claim_popover.js"))
 
 
-@register.inclusion_tag("klaim/_distance.html")
-def claim_distance(location_name, compact=False):
-    """Render the distance from the viewer to a pickup location.
+def _venue_context(location_name):
+    """Venue point and campus fallback shared by the distance tags."""
+    return {
+        "point": integrations.get_location_point(location_name),
+        "campus": integrations.get_campus_center(),
+    }
 
-    The server renders a fallback (straight line from the campus center) so the
-    page works without JavaScript. claim_distance.js then replaces it with the
-    straight-line distance from the viewer's own position on every page load.
-    With compact=True the output is " · 0,8 km" for inline use, and nothing when
-    the location has no matching venue.
+
+@register.inclusion_tag("klaim/_location_card.html")
+def claim_location_card(location_name, show_route=True):
+    """Render the "Lokasi Pengambilan" card: pickup place, map link, route and distance.
+
+    The route mode dropdown and the distance are driven by claim_distance.js.
+    With show_route=False only the place and the map link are shown.
     """
-    point = integrations.get_location_point(location_name)
-    fallback = ""
-    if point is not None:
-        km = integrations.get_campus_distance_km(point)
-        fallback = utils.format_distance(km) if km is not None else "-"
-    return {"point": point, "fallback": fallback, "compact": compact}
+    context = _venue_context(location_name)
+    context.update({"location_name": location_name, "show_route": show_route})
+    return context
+
+
+@register.inclusion_tag("klaim/_distance_rows.html")
+def claim_distance_rows(location_name):
+    """Render the "Rute" (mode dropdown) and "Jarak" rows for a <dl class="detail-list">."""
+    return _venue_context(location_name)
+
+
+@register.inclusion_tag("klaim/_distance_inline.html")
+def claim_distance_inline(location_name):
+    """Render ' · 2,1 km' for inline use. Stays hidden until a route mode is chosen."""
+    return _venue_context(location_name)

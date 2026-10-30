@@ -57,7 +57,7 @@
                     </div>
 
                     <div class="claim-notice" role="note">
-                        Ambil makanan sebelum {{ deadline|id_time }}. Setelah itu klaim dianggap tidak diambil.
+                        Datang sesuai waktu ambil yang kamu pilih (toleransi {{ grace_minutes }} menit, paling lambat {{ deadline|id_time }}). Setelah itu klaim dianggap tidak diambil dan porsinya dikembalikan.
                     </div>
 
                     <div class="claim-actions">
@@ -78,7 +78,7 @@
                     <div class="food-card__body">
                         <h2 class="food-card__title">{{ donation.food_name }}</h2>
                         <p class="food-card__meta">
-                            {{ donation.available_portions }} porsi &middot; {{ donation.donor_name }}{% if donation.distance_km is not None %} &middot; {{ donation.distance_km|id_distance }}{% endif %}                        </p>
+                            {{ donation.available_portions }} porsi &middot; {{ donation.donor_name }}{% claim_distance_inline donation.pickup_location %}                        </p>
                         <div class="food-card__footer">
                             <span class="deadline-badge">Sebelum {{ deadline|id_time }}</span>
                             {% if donation_detail_url %}<a class="claim-btn claim-btn--sunshine claim-btn--sm" href="{{ donation_detail_url }}">Detail</a>{% endif %}
@@ -91,16 +91,15 @@
                     <dl class="detail-list">
                         <dt>Donor</dt><dd>{{ donation.donor_name }}</dd>
                         <dt>Lokasi ambil</dt><dd>{{ donation.pickup_location }}</dd>
-                        <dt>Jarak</dt><dd>{% if donation.distance_km is not None %}{{ donation.distance_km|id_distance }}{% else %}-{% endif %}</dd>
-                    </dl>
+                        {% claim_distance_rows donation.pickup_location %}                    </dl>
                 </section>
             </div>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="{% static 'klaim/js/claim.js' %}" defer></script>
+<script src="{% static 'klaim/js/claim_distance.js' %}" defer></script>
 {% endblock %}

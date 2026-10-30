@@ -41,6 +41,19 @@ Manfaat aplikasi ini bagi masyarakat antara lain:
 | 4 | Venue dan Lokasi | Model titik pengambilan berisi nama gedung, fakultas, koordinat, dan deskripsi akses. Admin dan donor dapat mengelola venue, dengan integrasi OpenStreetMap untuk menampilkan peta dan menghitung jarak ke lokasi pengguna. | Immanuel Marvin Pandjaitan |
 | 5 | Laporan Dampak | Model laporan berisi periode, total makanan tersalurkan, dan jumlah donor serta penerima yang terlibat. Admin dapat membuat laporan dari agregasi data klaim, mengedit, menghapus, dan mengunduh laporan dalam bentuk PDF atau tabel. | Joshua Imanuel Setiawan |
 
+## Dokumentasi Modul dan Penggunaan AI
+
+Penjelasan teknis dan AI disclosure ditulis pada README setiap modul. Dokumentasi
+ini mencakup tujuan penggunaan AI, contoh prompt, hasil yang digunakan, serta
+peninjauan dan perbaikan manual oleh pengembang.
+
+- [Donasi Makanan](donasi/README.md)
+- [Klaim dan Reservasi](klaim/README.md)
+- [Venue dan Lokasi](venue/README.md)
+- [Laporan Dampak](laporan/README.md)
+
+README untuk modul Profil Pengguna akan ditambahkan oleh PIC modul tersebut.
+
 ## Public API yang Digunakan
 
 Implementasi dan cara mencoba modul Donasi Makanan dijelaskan di

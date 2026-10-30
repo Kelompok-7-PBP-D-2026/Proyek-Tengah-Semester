@@ -334,7 +334,33 @@ Catatan:
 - **Modul laporan:** data dampak dari `Claim.objects.filter(status="picked_up")`, misalnya `Sum("portions")`.
 
 ## Keterbatasan saat ini
-
-- Klaim yang dibuat sebelum integrasi profil tetap menampilkan nama donor lama, karena nama donor disimpan sebagai snapshot saat klaim dibuat.
 - Jarak memakai pencocokan nama teks ke venue, dan pilihan moda disimpan terpisah dari halaman venue (kunci `sessionStorage` berbeda).
-- Perilaku JavaScript (rute, popover, modal verifikasi) belum punya test otomatis.
+
+## Penggunaan AI
+Pengembangan modul ini memanfaatkan **Claude (Anthropic)** sebagai alat bantu dalam proses perencanaan, penulisan kode, penyempurnaan implementasi, dan debugging. AI digunakan secara interaktif dengan memberikan brief mengenai kebutuhan fitur, meminta rekomendasi pendekatan teknis, serta mengembangkan kode berdasarkan hasil diskusi dan kebutuhan implementasi.
+
+### Bentuk penggunaan
+1. Perencanaan implementasi fitur
+   Memberikan penjelasan terperinci mengenai alur dan kebutuhan fitur untuk memperoleh gambaran komponen yang perlu dikembangkan. Claude membantu menguraikan kebutuhan tersebut menjadi langkah implementasi, termasuk menentukan struktur file, pembagian fungsi backend dan frontend, serta komponen yang diperlukan.
+
+2. Penulisan dan pengembangan kode
+   Memanfaatkan Claude untuk menghasilkan kode awal, memberikan contoh implementasi, dan menyempurnakan kode berdasarkan kebutuhan tampilan maupun fungsionalitas tertentu. Misalnya, pada pengembangan section informasi lokasi di halaman detail klaim, Claude membantu menyusun implementasi dropdown untuk memilih moda transportasi, termasuk struktur HTML, logika JavaScript, dan styling CSS.
+
+3. Debugging dan perbaikan implementasi
+   Memberikan potongan kode, pesan error, maupun deskripsi perilaku fitur yang tidak sesuai untuk dianalisis. Claude membantu mengidentifikasi kemungkinan penyebab masalah, memberikan alternatif solusi, serta menyarankan perubahan pada bagian kode yang berkaitan.
+
+4. Penyesuaian antarmuka berdasarkan Figma
+   Menggunakan gambar desain Figma sebagai referensi visual untuk membantu menyesuaikan hasil implementasi dengan rancangan antarmuka. Claude membantu mengidentifikasi ketidaksesuaian layout dan memberikan rekomendasi perubahan pada struktur elemen, CSS, spacing, alignment, dan komponen lainnya.
+
+### Contoh penggunaan
+
+| Aktivitas | Instruksi kepada Claude | Hasil penggunaan |
+| --- | --- | --- |
+| Perencanaan fitur | Memberikan brief alur fitur dan meminta rincian kebutuhan implementasinya. | Rancangan struktur file, komponen, dan tahapan pengerjaan. |
+| Pengembangan UI | Meminta implementasi dropdown moda transportasi pada informasi lokasi di halaman detail klaim. | Kode awal HTML, JavaScript, dan CSS untuk komponen dropdown. |
+| Penyesuaian layout | Memberikan screenshot Figma dan hasil implementasi yang belum sesuai. | Rekomendasi serta penyesuaian kode untuk menyelaraskan tampilan dengan desain. |
+| Debugging | Memberikan kode dan pesan error untuk dianalisis. | Identifikasi kemungkinan penyebab masalah dan kode perbaikannya. |
+
+### Peninjauan implementasi
+
+Kode dan rekomendasi yang dihasilkan Claude digunakan sebagai bagian dari proses pengembangan dan disesuaikan dengan kebutuhan serta struktur proyek yang sudah ada. Setiap implementasi tetap memerlukan pemeriksaan untuk memastikan kesesuaian dengan alur fitur, keterkaitan antarmodul, dan hasil yang diharapkan. Pengujian serta debugging dilakukan kembali apabila ditemukan ketidaksesuaian.

@@ -1,13 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from donasi.models import Donasi
-from klaim.models import Claim, ClaimStatus
-
 from .forms import (
     DaftarDonorForm,
     DaftarPenerimaForm,
@@ -24,17 +22,18 @@ def home(request):
         waktu_akhir_pengambilan__gt=timezone.now(),
     ).select_related("donor")[:3]
 
-    # Porsi dianggap terselamatkan setelah klaim benar-benar selesai diambil.
-    total_porsi_diselamatkan = (
-        Claim.objects.filter(status=ClaimStatus.PICKED_UP)
-        .aggregate(total=Sum("portions"))["total"]
-        or 0
+    # Statistik mengikuti seluruh donasi yang pernah dibuat dan donor uniknya.
+    dampak = Donasi.objects.aggregate(
+        total_porsi=Sum("jumlah_porsi"),
+        total_donor=Count("donor_id", distinct=True),
     )
+    total_porsi = dampak["total_porsi"] or 0
 
     context = {
         "makanan_tersedia": makanan_tersedia,
-        "total_porsi_diselamatkan": total_porsi_diselamatkan,
-        "total_donasi": Donasi.objects.count(),
+        "total_porsi_donasi": total_porsi,
+        "total_porsi_donasi_tampilan": f"{total_porsi:,}".replace(",", "."),
+        "total_donor_berdonasi": dampak["total_donor"],
     }
     return render(request, "home.html", context)
 

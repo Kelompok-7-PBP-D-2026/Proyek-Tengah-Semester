@@ -417,6 +417,7 @@ class DonasiTests(TestCase):
 
     def test_navigation_is_different_for_donor_and_recipient(self):
         guest_html = self.client.get(reverse("donasi:daftar")).content.decode()
+        self.assertIn(f'{reverse("profil:home")}#cara-kerja', guest_html)
         self.assertNotIn(">Dampak</a>", guest_html)
 
         self.client.force_login(self.owner)

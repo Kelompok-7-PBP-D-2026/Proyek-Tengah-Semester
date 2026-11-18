@@ -58,7 +58,15 @@ INSTALLED_APPS = [
     'klaim',      # Kireina — Klaim dan Reservasi
     'venue',      # Marvin — Venue dan Lokasi
     'laporan',    # Joshua — Laporan Dampak
+    'rest_framework',  # Web service untuk aplikasi mobile (Proyek Akhir Semester)
 ]
+
+REST_FRAMEWORK = {
+    # Aplikasi mobile memakai sesi yang sama dengan situs web (cookie-based).
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

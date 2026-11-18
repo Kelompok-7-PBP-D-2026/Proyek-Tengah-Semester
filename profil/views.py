@@ -266,3 +266,4 @@ def detail_donor(request, pk):
     """Detail donor. Kontak hanya tampil untuk pengguna yang sudah login."""
     donor = get_object_or_404(ProfilDonor, pk=pk)
     return render(request, "profil/detail_donor.html", {"donor": donor})
+

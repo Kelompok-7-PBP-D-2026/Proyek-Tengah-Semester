@@ -1,9 +1,13 @@
 """URL routes for the claim module (mounted at /klaim/)."""
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from . import views
+from . import api, views
 
 app_name = "klaim"
+
+api_router = DefaultRouter()
+api_router.register("api/claim", api.ClaimViewSet, basename="api-claim")
 
 urlpatterns = [
     # Recipient
@@ -15,4 +19,5 @@ urlpatterns = [
     # Donor
     path("incoming/", views.incoming_claim_list, name="incoming_claim_list"),
     path("<int:pk>/verify/", views.claim_verify_code, name="claim_verify_code"),
+    path("", include(api_router.urls)),
 ]

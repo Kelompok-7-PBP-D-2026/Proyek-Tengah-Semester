@@ -44,6 +44,37 @@ body {
 .text-carrot { color: var(--mbg-carrot) !important; }
 .text-sunshine { color: var(--mbg-sunshine) !important; }
 
+/* Jaga kontras teks footer bersama dari warna tautan khusus setiap modul. */
+footer.text-cream,
+footer .text-cream {
+    color: var(--mbg-cream) !important;
+}
+
+/* Link navbar memakai bentuk pil yang sama pada hover dan halaman aktif. */
+.mbg-navbar-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 20px;
+    border-radius: 999px;
+    color: var(--mbg-forest) !important;
+    font-family: "Poppins", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+.mbg-navbar-link:hover,
+.mbg-navbar-link:focus-visible,
+.mbg-navbar-link.is-active {
+    background-color: var(--mbg-forest);
+    color: var(--mbg-cream) !important;
+    font-weight: 700;
+}
+
 /* Tombol */
 .btn-mbg-primary {
     background-color: var(--mbg-carrot);
@@ -597,3 +628,41 @@ a.mbg-chip--idle:hover { color: var(--mbg-forest); border-color: var(--mbg-fores
     color: var(--mbg-text-muted);
     margin: 0;
 }
+
+/* Autocomplete lokasi donor (OpenStreetMap) di halaman edit profil */
+.mbg-osm-hasil {
+    border: 2px solid var(--mbg-line, #d8d2c0);
+    border-radius: 12px;
+    background: #fff;
+    margin-top: 0.25rem;
+    overflow: hidden;
+    max-height: 15rem;
+    overflow-y: auto;
+}
+
+.mbg-osm-pilihan {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 0;
+    border-bottom: 1px solid var(--mbg-line, #d8d2c0);
+    padding: 0.625rem 0.875rem;
+    cursor: pointer;
+    font: inherit;
+}
+
+.mbg-osm-pilihan:last-child { border-bottom: 0; }
+.mbg-osm-pilihan:hover { background: var(--mbg-cream, #f3e8cc); }
+
+.mbg-osm-pilihan strong { display: block; font-size: 0.9375rem; }
+.mbg-osm-pilihan span { display: block; font-size: 0.8125rem; color: var(--mbg-text-muted, #6b6b60); }
+
+.mbg-osm-kosong {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    color: var(--mbg-text-muted, #6b6b60);
+}
+
+/* Dropdown radius di panel filter daftar donor */
+.mbg-radius { min-width: 12rem; }

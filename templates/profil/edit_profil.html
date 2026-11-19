@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% load static %}
+
 {% block title %}Edit Profil — MBG{% endblock %}
 
 {% block content %}
@@ -38,6 +40,18 @@ foto, jadi menambahkannya berarti migrasi baru.
                     <p class="mbg-help-sm">Peran tidak bisa diubah sendiri.</p>
                 </div>
                 {% include "profil/partials/form_field.html" with field=form.deskripsi label="Bio singkat" wide=1 %}
+                <div class="mbg-field mbg-field--wide" id="lokasi-donor">
+                    <label for="id_alamat">Lokasi donor (dari OpenStreetMap)</label>
+                    <input type="text" id="id_alamat" name="alamat"
+                           value="{{ form.alamat.value|default:'' }}" autocomplete="off"
+                           placeholder="Ketik nama gedung atau area kampus (mis. Fasilkom UI)"
+                           aria-describedby="lokasi-donor-hasil">
+                    <div id="lokasi-donor-hasil" class="mbg-osm-hasil" hidden></div>
+                    <p class="mbg-help-sm">Pilih satu hasil — koordinat dipakai untuk filter jarak di daftar donor.</p>
+                    {{ form.latitude }}
+                    {{ form.longitude }}
+                    <button type="button" id="lokasi-donor-bersih" class="btn btn-mbg-line btn-sm mt-2" hidden>Bersihkan lokasi</button>
+                </div>
                 {% else %}
                 {% include "profil/partials/form_field.html" with field=form.nama_lengkap label="Nama lengkap" %}
                 {% include "profil/partials/form_field.html" with field=form.kontak label="Nomor HP atau email" %}
@@ -49,6 +63,11 @@ foto, jadi menambahkannya berarti migrasi baru.
                 </div>
                 {% endif %}
             </div>
+
+            {% if peran == "Donor" %}
+            <script type="application/json" id="cari-lokasi-url">{% url 'profil:cari_lokasi' %}</script>
+            <script src="{% static 'js/profil_lokasi.js' %}" defer></script>
+            {% endif %}
 
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                 <a class="btn btn-mbg-line" href="{% url 'profil:profil_saya' %}">Batal</a>

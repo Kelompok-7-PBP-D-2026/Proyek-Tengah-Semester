@@ -14,20 +14,20 @@
                     {% with ns=request.resolver_match.namespace %}
                     {% if user.is_staff or user.is_superuser %}
                     {# Varian Admin (figma-export/Navbar/Admin.png) #}
-                    <li class="nav-item"><a class="btn btn-mbg-green btn-sm px-3" href="{% url 'admin:profil_profildonor_changelist' %}">Verifikasi</a></li>
-                    <li class="nav-item"><a class="{% if ns == 'venue' %}btn btn-mbg-green btn-sm px-3 rounded-pill{% else %}nav-link text-forest{% endif %}" href="{% url 'venue:daftar' %}">Venue</a></li>
-                    <li class="nav-item"><a class="nav-link text-forest" href="{% url 'laporan:dashboard' %}">Laporan</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link is-active" href="{% url 'admin:profil_profildonor_changelist' %}">Verifikasi</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link {% if ns == 'venue' %}is-active{% endif %}" href="{% url 'venue:daftar' %}">Venue</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link {% if ns == 'laporan' %}is-active{% endif %}" href="{% url 'laporan:dashboard' %}">Laporan</a></li>
                     <li class="nav-item"><span class="chip text-sunshine">Admin</span></li>
                     {% elif user.profil_donor %}
                     {# Varian Donor: Klaim masuk, Donasi saya. Menu aktif tampil sebagai pil hijau. #}
-                    <li class="nav-item"><a class="{% if ns == 'klaim' %}btn btn-mbg-green btn-sm px-3 rounded-pill{% else %}nav-link text-forest{% endif %}" href="{% url 'klaim:incoming_claim_list' %}">Klaim masuk</a></li>
-                    <li class="nav-item"><a class="{% if ns == 'donasi' %}btn btn-mbg-green btn-sm px-3 rounded-pill{% else %}nav-link text-forest{% endif %}" href="{% url 'donasi:daftar' %}?mine=1">Donasi saya</a></li>
-                    <li class="nav-item"><a class="{% if ns == 'venue' %}btn btn-mbg-green btn-sm px-3 rounded-pill{% else %}nav-link text-forest{% endif %}" href="{% url 'venue:daftar' %}">Venue</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link {% if ns == 'klaim' %}is-active{% endif %}" href="{% url 'klaim:incoming_claim_list' %}">Klaim masuk</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link {% if ns == 'donasi' %}is-active{% endif %}" href="{% url 'donasi:daftar' %}?mine=1">Donasi saya</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link {% if ns == 'venue' %}is-active{% endif %}" href="{% url 'venue:daftar' %}">Venue</a></li>
                     <li class="nav-item"><span class="chip text-sunshine">Donor</span></li>
                     {% elif user.profil_penerima %}
                     {# Varian Penerima: Klaim saya, Cari makanan. Menu aktif tampil sebagai pil hijau. #}
-                    <li class="nav-item"><a class="{% if ns == 'klaim' %}btn btn-mbg-green btn-sm px-3 rounded-pill{% else %}nav-link text-forest{% endif %}" href="{% url 'klaim:claim_list' %}">Klaim saya</a></li>
-                    <li class="nav-item"><a class="{% if ns == 'donasi' %}btn btn-mbg-green btn-sm px-3 rounded-pill{% else %}nav-link text-forest{% endif %}" href="{% url 'donasi:daftar' %}">Cari makanan</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link {% if ns == 'klaim' %}is-active{% endif %}" href="{% url 'klaim:claim_list' %}">Klaim saya</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link {% if ns == 'donasi' %}is-active{% endif %}" href="{% url 'donasi:daftar' %}">Cari makanan</a></li>
                     <li class="nav-item"><span class="chip text-sunshine">Penerima</span></li>
                     {% endif %}
                     {% endwith %}
@@ -41,9 +41,9 @@
                         </form>
                     </li>
                 {% else %}
-                    <li class="nav-item"><a class="nav-link text-forest" href="#cara-kerja">Cara kerja</a></li>
-                    <li class="nav-item"><a class="nav-link text-forest" href="{% url 'donasi:daftar' %}">Donasi makanan</a></li>
-                    <li class="nav-item"><a class="btn btn-mbg-green btn-sm px-3" href="{% url 'login' %}">Masuk</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link" href="{% url 'profil:home' %}#cara-kerja">Cara kerja</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link {% if request.resolver_match.namespace == 'donasi' %}is-active{% endif %}" href="{% url 'donasi:daftar' %}">Donasi makanan</a></li>
+                    <li class="nav-item"><a class="mbg-navbar-link is-active" href="{% url 'login' %}">Masuk</a></li>
                 {% endif %}
             </ul>
         </div>

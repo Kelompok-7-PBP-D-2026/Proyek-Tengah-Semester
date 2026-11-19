@@ -1,8 +1,12 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from . import views
+from . import api, views
 
 app_name = "laporan"
+
+api_router = DefaultRouter()
+api_router.register("api/laporan", api.LaporanViewSet, basename="api-laporan")
 
 urlpatterns = [
     path("", views.dashboard_laporan, name="dashboard"),
@@ -16,4 +20,5 @@ urlpatterns = [
     path("<int:pk>/generate/", views.hitung_ulang_laporan, name="generate"),
     path("<int:pk>/ekspor.csv", views.ekspor_laporan_csv, name="ekspor_csv"),
     path("<int:pk>/ekspor.pdf", views.ekspor_laporan_pdf, name="ekspor_pdf"),
+    path("", include(api_router.urls)),
 ]

@@ -21,6 +21,8 @@ from . import integrations, services, utils
 from .models import MAX_PORTIONS_PER_CLAIM, PICKUP_GRACE_MINUTES, Claim, ClaimStatus
 from .services import WRONG_CODE_MESSAGE, ClaimError
 
+from rest_framework.test import APIClient
+
 # Plain storages so {% static %} never needs a collectstatic manifest in tests.
 PLAIN_STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
@@ -1102,4 +1104,199 @@ class VenueIntegrationTests(ClaimTestCase):
         self.assertNotIn("data-distance-select", html)
         self.assertIn("<dd>-</dd>", html)
 
- 
+class ClaimApiTests(ClaimTestCase):
+    """The DRF endpoints must follow the same rules as the web pages."""
+
+    def setUp(self):
+        super().setUp()
+        self.api = APIClient()
+        self.list_url = reverse("klaim:api-claim-list")
+
+    def as_user(self, user):
+        self.api.force_authenticate(user)
+
+    def valid_payload(self, portions=1):
+        slots = utils.build_pickup_slots(
+            self.donation.waktu_akhir_pengambilan, start=self.donation.waktu_tersedia
+        )
+        return {
+            "donation_id": self.donation.pk,
+            "portions": portions,
+            "pickup_time": slots[1].isoformat(),
+            "note": "Bersama teman",
+        }
+
+    def test_login_is_required(self):
+        self.assertIn(self.api.get(self.list_url).status_code, (401, 403))
+
+    def test_list_shows_only_the_recipients_own_claims(self):
+        self.make_claim(user=self.recipient)
+        self.make_claim(user=self.other)
+        self.as_user(self.recipient)
+        data = self.api.get(self.list_url).json()
+        self.assertEqual(len(data["results"]), 1)
+
+    def test_create_goes_through_the_services(self):
+        self.as_user(self.recipient)
+        response = self.api.post(self.list_url, self.valid_payload(portions=2), format="json")
+        self.assertEqual(response.status_code, 201)
+        claim = Claim.objects.get()
+        self.assertEqual(claim.donor_id, self.donor.pk)        # visible to the donor
+        self.assertEqual(claim.donor_name, "BEM Fasilkom UI")  # snapshot comes from the donation
+        self.assertRegex(claim.pickup_code, r"^MBG-")
+        self.assertEqual(self.stock(), 8)                      # stock reserved
+
+    def test_create_ignores_fields_the_client_should_not_set(self):
+        self.as_user(self.recipient)
+        payload = self.valid_payload()
+        payload.update({"food_name": "Palsu", "donor_name": "Palsu", "expires_at": "2099-01-01T00:00:00Z"})
+        self.api.post(self.list_url, payload, format="json")
+        claim = Claim.objects.get()
+        self.assertEqual(claim.food_name, "Nasi ayam")
+        self.assertLess(claim.expires_at.year, 2099)
+
+    def test_create_is_blocked_for_donors(self):
+        self.as_user(self.donor)
+        response = self.api.post(self.list_url, self.valid_payload(), format="json")
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Claim.objects.count(), 0)
+
+    def test_create_enforces_the_business_rules(self):
+        self.as_user(self.recipient)
+        too_many = self.api.post(self.list_url, self.valid_payload(portions=4), format="json")
+        self.assertEqual(too_many.status_code, 400)
+        self.api.post(self.list_url, self.valid_payload(), format="json")
+        duplicate = self.api.post(self.list_url, self.valid_payload(), format="json")
+        self.assertEqual(duplicate.status_code, 400)
+        self.assertIn("klaim aktif", duplicate.json()["detail"])
+        self.assertEqual(Claim.objects.count(), 1)
+
+    def test_create_rejects_a_slot_that_was_never_offered(self):
+        self.as_user(self.recipient)
+        payload = self.valid_payload()
+        payload["pickup_time"] = "2020-01-01T00:00:00+07:00"
+        self.assertEqual(self.api.post(self.list_url, payload, format="json").status_code, 400)
+
+    def test_claims_cannot_be_edited_or_deleted_directly(self):
+        claim = self.make_claim()
+        self.as_user(self.recipient)
+        url = reverse("klaim:api-claim-detail", args=[claim.pk])
+        self.assertEqual(self.api.patch(url, {"portions": 3}, format="json").status_code, 405)
+        self.assertEqual(self.api.put(url, {}, format="json").status_code, 405)
+        self.assertEqual(self.api.delete(url).status_code, 405)
+
+    def test_detail_is_private_and_has_the_timeline(self):
+        claim = self.make_claim()
+        url = reverse("klaim:api-claim-detail", args=[claim.pk])
+        self.as_user(self.other)
+        self.assertEqual(self.api.get(url).status_code, 404)
+        self.as_user(self.recipient)
+        data = self.api.get(url).json()
+        self.assertEqual(data["pickup_code"], claim.pickup_code)
+        self.assertEqual(len(data["timeline"]), 2)
+        self.assertTrue(data["can_cancel"])
+
+    def test_cancel_returns_the_portions(self):
+        claim = self.make_claim(portions=2)
+        self.as_user(self.recipient)
+        response = self.api.post(reverse("klaim:api-claim-cancel", args=[claim.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "cancelled")
+        self.assertEqual(self.stock(), 10)
+
+    def test_cancel_by_someone_else_is_404(self):
+        claim = self.make_claim()
+        self.as_user(self.other)
+        self.assertEqual(self.api.post(reverse("klaim:api-claim-cancel", args=[claim.pk])).status_code, 404)
+
+    def test_form_info_lists_slots_and_limits(self):
+        self.as_user(self.recipient)
+        data = self.api.get(reverse("klaim:api-claim-form", args=[self.donation.pk])).json()
+        self.assertTrue(data["can_claim"])
+        self.assertEqual(data["max_portions"], MAX_PORTIONS_PER_CLAIM)
+        self.assertGreater(len(data["slots"]), 1)
+
+    def test_form_info_explains_why_claiming_is_blocked(self):
+        self.make_claim()
+        self.as_user(self.recipient)
+        data = self.api.get(reverse("klaim:api-claim-form", args=[self.donation.pk])).json()
+        self.assertFalse(data["can_claim"])
+        self.assertIn("klaim aktif", data["blocker"])
+        self.assertEqual(data["slots"], [])
+
+    def test_incoming_hides_the_pickup_code(self):
+        self.make_claim()
+        self.as_user(self.donor)
+        data = self.api.get(reverse("klaim:api-incoming-list")).json()
+        item = data["results"][0]
+        self.assertNotIn("pickup_code", item)
+        self.assertEqual(item["recipient_label"], "Rina Sari (2506 xxxx)")
+
+    def test_incoming_is_for_donors_only(self):
+        self.as_user(self.recipient)
+        self.assertEqual(self.api.get(reverse("klaim:api-incoming-list")).status_code, 403)
+
+    def test_incoming_shows_only_the_donors_own_claims(self):
+        self.make_claim()
+        self.as_user(self.other_donor)
+        self.assertEqual(self.api.get(reverse("klaim:api-incoming-list")).json()["results"], [])
+
+    def test_stats(self):
+        self.make_claim()
+        self.as_user(self.donor)
+        data = self.api.get(reverse("klaim:api-incoming-stats")).json()
+        self.assertEqual(data, {"waiting": 1, "picked_up": 0, "not_picked": 0})
+
+    def test_verify_with_the_right_and_the_wrong_code(self):
+        claim = self.make_claim()
+        url = reverse("klaim:api-incoming-verify", args=[claim.pk])
+        self.as_user(self.donor)
+        wrong = self.api.post(url, {"pickup_code": self.wrong_code(claim)}, format="json")
+        self.assertEqual(wrong.status_code, 400)
+        right = self.api.post(url, {"pickup_code": claim.pickup_code}, format="json")
+        self.assertEqual(right.status_code, 200)
+        claim.refresh_from_db()
+        self.assertEqual(claim.status, ClaimStatus.PICKED_UP)
+
+    def test_verify_by_another_donor_is_404(self):
+        claim = self.make_claim()
+        self.as_user(self.other_donor)
+        url = reverse("klaim:api-incoming-verify", args=[claim.pk])
+        self.assertEqual(self.api.post(url, {"pickup_code": claim.pickup_code}, format="json").status_code, 404)
+
+
+@override_settings(STORAGES=PLAIN_STORAGES)
+class ClaimCheckViewTests(ClaimTestCase):
+    """views.claim_check: the quick check used by the donation page."""
+
+    def url(self, donation=None):
+        return reverse("klaim:claim_check", args=[(donation or self.donation).pk])
+
+    def test_anonymous_users_may_proceed_to_the_login(self):
+        self.assertEqual(self.client.get(self.url()).json(), {"ok": True})
+
+    def test_eligible_recipient_may_proceed(self):
+        self.client.force_login(self.recipient)
+        self.assertTrue(self.client.get(self.url()).json()["ok"])
+
+    def test_blocked_users_get_the_reason(self):
+        self.client.force_login(self.donor)
+        data = self.client.get(self.url()).json()
+        self.assertFalse(data["ok"])
+        self.assertIn("donor", data["message"])
+
+    def test_existing_active_claim_is_reported(self):
+        self.make_claim()
+        self.client.force_login(self.recipient)
+        data = self.client.get(self.url()).json()
+        self.assertFalse(data["ok"])
+        self.assertIn("klaim aktif", data["message"])
+
+    def test_unknown_donation(self):
+        self.client.force_login(self.recipient)
+        data = self.client.get(reverse("klaim:claim_check", args=[999999])).json()
+        self.assertFalse(data["ok"])
+
+    def test_post_is_not_allowed(self):
+        self.client.force_login(self.recipient)
+        self.assertEqual(self.client.post(self.url()).status_code, 405)

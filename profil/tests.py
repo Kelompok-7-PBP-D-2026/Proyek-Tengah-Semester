@@ -514,3 +514,62 @@ class LokasiEditProfilTest(TestCase):
         response = self.client.get(reverse("profil:edit_profil"))
         self.assertNotContains(response, 'id="id_alamat"')
         self.assertNotContains(response, "profil_lokasi.js")
+
+
+class ProfilApiTest(TestCase):
+    """Endpoint DRF profil: login wajib, dan kontak/NIM penerima tidak bocor."""
+
+    def setUp(self):
+        self.donor_user = User.objects.create_user("api_donor", password="rahasia-123")
+        self.donor = ProfilDonor.objects.create(
+            user=self.donor_user,
+            nama_unit="Kantin Fasilkom",
+            jenis=JenisDonor.KANTIN,
+            kontak="donor@example.com",
+            alamat="Gedung Fasilkom",
+        )
+        self.penerima_user = User.objects.create_user("api_penerima", password="rahasia-123")
+        self.penerima = ProfilPenerima.objects.create(
+            user=self.penerima_user,
+            nama_lengkap="Budi Santoso",
+            nim="2506000001",
+            fakultas="fasilkom",
+            kontak="081234567890",
+        )
+
+    def test_anonim_ditolak(self):
+        self.assertEqual(self.client.get("/api/profil-donor/").status_code, 403)
+        self.assertEqual(self.client.get("/api/profil-penerima/").status_code, 403)
+
+    def test_donor_list_memuat_data_publik_tanpa_kontak(self):
+        self.client.force_login(self.penerima_user)
+        response = self.client.get("/api/profil-donor/")
+        self.assertEqual(response.status_code, 200)
+        item = response.json()[0] if isinstance(response.json(), list) else response.json()["results"][0]
+        self.assertEqual(item["nama_unit"], "Kantin Fasilkom")
+        self.assertEqual(item["inisial"], "KF")
+        self.assertEqual(item["jenis_label"], "Kantin Kampus")
+        self.assertNotIn("kontak", item)
+        self.assertNotIn("user", item)
+
+    def test_penerima_list_tidak_membocorkan_nim_atau_kontak(self):
+        self.client.force_login(self.donor_user)
+        response = self.client.get("/api/profil-penerima/")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        item = data[0] if isinstance(data, list) else data["results"][0]
+        self.assertEqual(item["nama_lengkap"], "Budi Santoso")
+        self.assertNotIn("nim", item)
+        self.assertNotIn("kontak", item)
+        self.assertNotIn("081234567890", response.content.decode())
+
+    def test_profil_read_only_via_api(self):
+        self.client.force_login(self.donor_user)
+        response = self.client.patch(
+            f"/api/profil-donor/{self.donor.pk}/",
+            {"nama_unit": "Diubah"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 405)
+        self.donor.refresh_from_db()
+        self.assertEqual(self.donor.nama_unit, "Kantin Fasilkom")

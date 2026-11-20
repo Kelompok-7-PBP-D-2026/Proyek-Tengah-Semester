@@ -9,6 +9,7 @@ from django.templatetags.static import static
 from django.urls import reverse
 from django.utils import timezone
 from PIL import Image
+from rest_framework.test import APIClient
 
 from klaim.models import Claim, ClaimStatus
 from profil.models import Fakultas, JenisDonor, ProfilDonor, ProfilPenerima
@@ -66,6 +67,7 @@ class DonasiTests(TestCase):
         )
         self.start = timezone.now().replace(second=0, microsecond=0) + timedelta(hours=1)
         self.item = self.create_donation()
+        self.api_client = APIClient()
 
     def create_donation(self, **changes):
         """Membuat Donasi uji dengan nilai default yang dapat dioverride."""
@@ -122,7 +124,106 @@ class DonasiTests(TestCase):
             content_type="image/png",
         )
 
+    def drf_payload(self, **changes):
+        """Payload JSON valid untuk endpoint DRF Donasi."""
+        data = {
+            "nama": "Roti seminar",
+            "jumlah_porsi": 12,
+            "lokasi": "Balairung UI",
+            "waktu_tersedia": self.start.isoformat(),
+            "waktu_akhir_pengambilan": (self.start + timedelta(hours=2)).isoformat(),
+            "catatan": "Bawa wadah sendiri.",
+        }
+        data.update(changes)
+        return data
+
     # ===== CRUD dan validasi form =====
+
+    # ===== API DRF mobile =====
+
+    def test_drf_list_is_public_and_has_mobile_fields(self):
+        response = self.api_client.get(reverse("donasi:api-donasi-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.data, list)
+        item = response.data[0]
+        self.assertEqual(item["nama"], self.item.nama)
+        self.assertEqual(item["status_tampilan"], "Tersedia")
+        self.assertIn("foto_url", item)
+        self.assertFalse(item["can_edit"])
+
+    def test_drf_list_allows_local_flutter_web_origin(self):
+        response = self.api_client.get(
+            reverse("donasi:api-donasi-list"),
+            HTTP_ORIGIN="http://localhost:62050",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Access-Control-Allow-Origin"],
+            "http://localhost:62050",
+        )
+
+    def test_drf_donor_can_create_its_own_donation(self):
+        self.api_client.force_authenticate(user=self.owner)
+
+        response = self.api_client.post(
+            reverse("donasi:api-donasi-list"),
+            self.drf_payload(donor=self.other_donor.pk),
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        donation = Donasi.objects.get(pk=response.data["id"])
+        self.assertEqual(donation.donor, self.owner)
+        self.assertTrue(response.data["can_edit"])
+
+    def test_drf_recipient_cannot_create_donation(self):
+        self.api_client.force_authenticate(user=self.recipient)
+
+        response = self.api_client.post(
+            reverse("donasi:api-donasi-list"),
+            self.drf_payload(),
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_drf_only_owner_can_update_or_delete_donation(self):
+        detail_url = reverse("donasi:api-donasi-detail", args=[self.item.pk])
+        self.api_client.force_authenticate(user=self.other_donor)
+
+        update_response = self.api_client.patch(
+            detail_url,
+            {"nama": "Tidak boleh diubah"},
+            format="json",
+        )
+        delete_response = self.api_client.delete(detail_url)
+
+        self.assertEqual(update_response.status_code, 403)
+        self.assertEqual(delete_response.status_code, 403)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.nama, "Nasi ayam")
+
+    def test_drf_owner_can_update_and_serializer_validates_dates(self):
+        detail_url = reverse("donasi:api-donasi-detail", args=[self.item.pk])
+        self.api_client.force_authenticate(user=self.owner)
+
+        update_response = self.api_client.patch(
+            detail_url,
+            {"nama": "Nasi ayam pedas"},
+            format="json",
+        )
+        invalid_response = self.api_client.post(
+            reverse("donasi:api-donasi-list"),
+            self.drf_payload(waktu_akhir_pengambilan=self.start.isoformat()),
+            format="json",
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(update_response.data["nama"], "Nasi ayam pedas")
+        self.assertEqual(invalid_response.status_code, 400)
+        self.assertIn("waktu_akhir_pengambilan", invalid_response.data)
 
     def test_list_and_detail_pages_can_be_opened(self):
         list_response = self.client.get(reverse("donasi:daftar"))

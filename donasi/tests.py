@@ -152,6 +152,18 @@ class DonasiTests(TestCase):
         self.assertIn("foto_url", item)
         self.assertFalse(item["can_edit"])
 
+    def test_drf_list_allows_local_flutter_web_origin(self):
+        response = self.api_client.get(
+            reverse("donasi:api-donasi-list"),
+            HTTP_ORIGIN="http://localhost:62050",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response["Access-Control-Allow-Origin"],
+            "http://localhost:62050",
+        )
+
     def test_drf_donor_can_create_its_own_donation(self):
         self.api_client.force_authenticate(user=self.owner)
 

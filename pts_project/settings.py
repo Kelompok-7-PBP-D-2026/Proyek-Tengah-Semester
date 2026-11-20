@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     # Modul kelompok (lihat README section Pembagian Kerja)
     'profil',     # Fikri  — Profil Pengguna
     'donasi',     # Rindu  — Donasi Makanan
@@ -68,10 +69,17 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Flutter Web berjalan dari origin localhost saat development. Batasi CORS ke
+# origin lokal tersebut; jangan membuka API deployment untuk seluruh internet.
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^http://(localhost|127\.0\.0\.1):\d+$",
+]
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
